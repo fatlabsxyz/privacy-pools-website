@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { addBreadcrumb, captureException, withScope } from '@sentry/nextjs';
 import { getAddress, Hex, parseUnits, TransactionExecutionError } from 'viem';
 import { generatePrivateKey } from 'viem/accounts';
@@ -168,84 +168,151 @@ export const useWithdraw = () => {
     return null;
   };
 
-  const generateProof = async () => {
-    if (TEST_MODE) return;
+  const generateProof = useCallback(
+    async (onProgress?: (progress: { phase: string; progress: number }) => void) => {
+      if (TEST_MODE) return;
 
-    const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
+      const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
-    if (
-      !poolAccount ||
-      !target ||
-      !commitment ||
-      !aspLeaves ||
-      !stateLeaves ||
-      !relayerDetails ||
-      !relayerDetails.relayerAddress ||
-      relayerDetails.fees === undefined ||
-      !accountService
-    )
-      throw new Error('Missing some required data to generate proof');
+      if (
+        !poolAccount ||
+        !target ||
+        !commitment ||
+        !aspLeaves ||
+        !stateLeaves ||
+        !relayerDetails ||
+        !relayerDetails.relayerAddress ||
+        relayerDetails.fees === undefined ||
+        !accountService
+      )
+        throw new Error('Missing some required data to generate proof');
 
-    let poolScope: Hash | bigint | undefined;
-    let stateMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
-    let aspMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
-    let merkleProofGenerated = false;
+      let poolScope: Hash | bigint | undefined;
+      let stateMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
+      let aspMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
+      let merkleProofGenerated = false;
 
-    try {
-      const newWithdrawal = prepareWithdrawRequest(
-        getAddress(target),
-        getAddress(selectedPoolInfo.entryPointAddress),
-        getAddress(relayerDetails.relayerAddress),
-        relayerDetails.fees,
-      );
+      try {
+        const newWithdrawal = prepareWithdrawRequest(
+          getAddress(target),
+          getAddress(selectedPoolInfo.entryPointAddress),
+          getAddress(relayerDetails.relayerAddress),
+          relayerDetails.fees,
+        );
 
-      poolScope = await getScope(publicClient, selectedPoolInfo?.address);
-      stateMerkleProof = await getMerkleProof(stateLeaves?.map(BigInt) as bigint[], commitment.hash);
-      aspMerkleProof = await getMerkleProof(aspLeaves?.map(BigInt), commitment.label);
-      const context = await getContext(newWithdrawal, poolScope as Hash);
-      const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
+        poolScope = await getScope(publicClient, selectedPoolInfo?.address);
+        stateMerkleProof = await getMerkleProof(stateLeaves?.map(BigInt) as bigint[], commitment.hash);
+        aspMerkleProof = await getMerkleProof(aspLeaves?.map(BigInt), commitment.label);
+        const context = await getContext(newWithdrawal, poolScope as Hash);
+        const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
 
-      aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue
+        aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue
 
-      const withdrawalProofInput = prepareWithdrawalProofInput(
-        commitment,
-        parseUnits(amount, decimals),
-        stateMerkleProof,
-        aspMerkleProof,
-        BigInt(context),
-        secret,
-        nullifier,
-      );
-      if (aspMerkleProof && stateMerkleProof) merkleProofGenerated = true;
+        const withdrawalProofInput = prepareWithdrawalProofInput(
+          commitment,
+          parseUnits(amount, decimals),
+          stateMerkleProof,
+          aspMerkleProof,
+          BigInt(context),
+          secret,
+          nullifier,
+        );
+        if (aspMerkleProof && stateMerkleProof) merkleProofGenerated = true;
 
-      const proof = await generateWithdrawalProof(commitment, withdrawalProofInput);
-      const verified = await verifyWithdrawalProof(proof);
+        // Use worker for progress updates, but still call actual SDK for proof generation
+        const workerPromise = new Promise((resolve, reject) => {
+          const worker = new Worker(new URL('../workers/zkProofWorker.ts', import.meta.url));
+          const requestId = Math.random().toString(36).substring(2, 15);
 
-      if (!verified) throw new Error('Proof verification failed');
+          worker.onmessage = (event) => {
+            const { type, payload, id } = event.data;
 
-      setProof(proof);
-      setWithdrawal(newWithdrawal);
-      setNewSecretKeys({ secret, nullifier });
+            if (id !== requestId) return;
 
-      return proof;
-    } catch (err) {
-      const error = err as TransactionExecutionError;
+            switch (type) {
+              case 'success':
+                worker.terminate();
+                resolve(payload);
+                break;
+              case 'error':
+                worker.terminate();
+                reject(new Error(payload.message));
+                break;
+              case 'progress':
+                if (onProgress) {
+                  onProgress(payload);
+                }
+                break;
+            }
+          };
 
-      // Log proof generation error to Sentry
-      logErrorToSentry(error, {
-        operation_step: 'proof_generation',
-        error_type: error?.name || 'unknown',
-        has_pool_scope: !!poolScope,
-        merkle_proof_generated: merkleProofGenerated,
-        proof_verified: false,
-      });
+          worker.onerror = (error) => {
+            worker.terminate();
+            reject(error);
+          };
 
-      const errorMessage = getDefaultErrorMessage(error?.shortMessage || error?.message);
-      addNotification('error', errorMessage);
-      console.error('Error generating proof', error);
-      throw error;
-    }
-  };
+          worker.postMessage({
+            type: 'generateWithdrawalProof',
+            payload: { commitment, input: withdrawalProofInput },
+            id: requestId,
+          });
+        });
+
+        // Run both worker (for progress) and actual SDK call in parallel
+        const [, proof] = await Promise.all([workerPromise, generateWithdrawalProof(commitment, withdrawalProofInput)]);
+
+        const verified = await verifyWithdrawalProof(proof);
+
+        if (!verified) throw new Error('Proof verification failed');
+
+        setProof(proof);
+        setWithdrawal(newWithdrawal);
+        setNewSecretKeys({ secret, nullifier });
+
+        if (onProgress) {
+          onProgress({ phase: 'verifying_proof', progress: 1.0 });
+        }
+
+        return proof;
+      } catch (err) {
+        const error = err as TransactionExecutionError;
+
+        // Log proof generation error to Sentry
+        logErrorToSentry(error, {
+          operation_step: 'proof_generation',
+          error_type: error?.name || 'unknown',
+          has_pool_scope: !!poolScope,
+          merkle_proof_generated: merkleProofGenerated,
+          proof_verified: false,
+        });
+
+        const errorMessage = getDefaultErrorMessage(error?.shortMessage || error?.message);
+        addNotification('error', errorMessage);
+        console.error('Error generating proof', error);
+        throw error;
+      }
+    },
+    [
+      relayersData,
+      selectedRelayer?.url,
+      poolAccount,
+      target,
+      commitment,
+      aspLeaves,
+      stateLeaves,
+      accountService,
+      selectedPoolInfo,
+      publicClient,
+      amount,
+      decimals,
+      addNotification,
+      getDefaultErrorMessage,
+      setProof,
+      setWithdrawal,
+      setNewSecretKeys,
+      logErrorToSentry,
+    ],
+  );
 
   const withdraw = async () => {
     if (!TEST_MODE) {
