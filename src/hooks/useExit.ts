@@ -86,7 +86,12 @@ export const useExit = () => {
   };
 
   const generateProof = useCallback(
-    async (onProgress?: (progress: { phase: string; progress: number }) => void) => {
+    async (
+      onProgress?: (progress: {
+        phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof';
+        progress: number;
+      }) => void,
+    ) => {
       if (!poolAccount?.lastCommitment) throw new Error('Pool account commitment not found');
 
       // Use worker for progress updates, but still call actual SDK for proof generation

@@ -84,69 +84,83 @@ export const useWithdraw = () => {
   const stateLeaves = aspData.mtLeavesData?.stateTreeLeaves;
   const { address } = useAccount();
 
-  //eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logErrorToSentry = (error: any, context: Record<string, any>) => {
-    // Filter out expected user behavior errors
-    if (error && typeof error === 'object') {
-      const message = error.message || '';
-      const errorName = error.name || '';
-      const errorCode = error.code;
+  const logErrorToSentry = useCallback(
+    (error: Error | unknown, context: Record<string, unknown>) => {
+      // Filter out expected user behavior errors
+      if (error && typeof error === 'object') {
+        const message = (error as { message?: string }).message || '';
+        const errorName = (error as { name?: string }).name || '';
+        const errorCode = (error as { code?: number }).code;
 
-      // Don't log wallet rejections and user behavior errors
-      if (
-        errorCode === 4001 ||
-        errorCode === 4100 ||
-        errorCode === 4200 ||
-        errorCode === -32002 ||
-        errorCode === -32003 ||
-        message.includes('User rejected the request') ||
-        message.includes('User denied') ||
-        message.includes('User cancelled') ||
-        message.includes('Pop up window failed to open') ||
-        message.includes('provider is not defined') ||
-        message.includes('No Ethereum provider found') ||
-        message.includes('Connection timeout') ||
-        message.includes('Request timeout') ||
-        message.includes('Transaction cancelled') ||
-        message.includes('Chain switching failed') ||
-        errorName === 'UserRejectedRequestError'
-      ) {
-        console.warn('Filtered wallet user behavior error (not logging to Sentry)');
-        return;
+        // Don't log wallet rejections and user behavior errors
+        if (
+          errorCode === 4001 ||
+          errorCode === 4100 ||
+          errorCode === 4200 ||
+          errorCode === -32002 ||
+          errorCode === -32003 ||
+          message.includes('User rejected the request') ||
+          message.includes('User denied') ||
+          message.includes('User cancelled') ||
+          message.includes('Pop up window failed to open') ||
+          message.includes('provider is not defined') ||
+          message.includes('No Ethereum provider found') ||
+          message.includes('Connection timeout') ||
+          message.includes('Request timeout') ||
+          message.includes('Transaction cancelled') ||
+          message.includes('Chain switching failed') ||
+          errorName === 'UserRejectedRequestError'
+        ) {
+          console.warn('Filtered wallet user behavior error (not logging to Sentry)');
+          return;
+        }
       }
-    }
 
-    withScope((scope) => {
-      scope.setUser({
-        address: address,
+      withScope((scope) => {
+        scope.setUser({
+          address: address,
+        });
+
+        // Set additional context
+        scope.setContext('withdrawal_context', {
+          chainId,
+          poolAddress: selectedPoolInfo?.address,
+          entryPointAddress: selectedPoolInfo?.entryPointAddress,
+          amount: amount?.toString(),
+          target,
+          hasPoolAccount: !!poolAccount,
+          hasCommitment: !!commitment,
+          hasAspLeaves: !!aspLeaves,
+          hasStateLeaves: !!stateLeaves,
+          hasSelectedRelayer: !!selectedRelayer?.url,
+          selectedRelayer,
+          testMode: TEST_MODE,
+          ...context,
+        });
+
+        // Set tags for filtering
+        scope.setTag('operation', 'withdraw');
+        scope.setTag('chain_id', chainId?.toString());
+        scope.setTag('test_mode', TEST_MODE.toString());
+
+        // Log the error
+        captureException(error);
       });
-
-      // Set additional context
-      scope.setContext('withdrawal_context', {
-        chainId,
-        poolAddress: selectedPoolInfo?.address,
-        entryPointAddress: selectedPoolInfo?.entryPointAddress,
-        amount: amount?.toString(),
-        target,
-        hasPoolAccount: !!poolAccount,
-        hasCommitment: !!commitment,
-        hasAspLeaves: !!aspLeaves,
-        hasStateLeaves: !!stateLeaves,
-        hasSelectedRelayer: !!selectedRelayer?.url,
-        selectedRelayer,
-        testMode: TEST_MODE,
-        ...context,
-      });
-
-      // Set tags for filtering
-      scope.setTag('operation', 'withdraw');
-      scope.setTag('chain_id', chainId?.toString());
-      scope.setTag('test_mode', TEST_MODE.toString());
-
-      // Log the error
-      captureException(error);
-    });
-  };
+    },
+    [
+      address,
+      chainId,
+      selectedPoolInfo?.address,
+      selectedPoolInfo?.entryPointAddress,
+      selectedRelayer,
+      amount,
+      target,
+      poolAccount,
+      commitment,
+      aspLeaves,
+      stateLeaves,
+    ],
+  );
 
   const getPrivacyPoolErrorMessage = (errorMessage: string): string | null => {
     // Check for exact matches first
@@ -169,7 +183,12 @@ export const useWithdraw = () => {
   };
 
   const generateProof = useCallback(
-    async (onProgress?: (progress: { phase: string; progress: number }) => void) => {
+    async (
+      onProgress?: (progress: {
+        phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof';
+        progress: number;
+      }) => void,
+    ) => {
       if (TEST_MODE) return;
 
       const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
