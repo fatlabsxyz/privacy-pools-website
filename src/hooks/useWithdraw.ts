@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { addBreadcrumb, captureException, withScope } from '@sentry/nextjs';
 import { getAddress, Hex, parseUnits, TransactionExecutionError } from 'viem';
 import { generatePrivateKey } from 'viem/accounts';
@@ -11,6 +11,7 @@ import {
   useNotifications,
   usePoolAccountsContext,
   useChainContext,
+  useRequestQuote,
 } from '~/hooks';
 import { Hash, ModalType, Secret, ProofRelayerPayload } from '~/types';
 import {
@@ -53,8 +54,19 @@ export const useWithdraw = () => {
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const { setModalOpen, setIsClosable } = useModal();
-  const { aspData, relayerData } = useExternalServices();
+  const { aspData, relayerData, currentSelectedRelayerData } = useExternalServices();
   const { switchChainAsync } = useSwitchChain();
+  const {
+    selectedPoolInfo,
+    chainId,
+    balanceBN: { decimals },
+    relayersData,
+    selectedRelayer,
+  } = useChainContext();
+
+  const { accountService, addWithdrawal } = useAccountContext();
+  const publicClient = usePublicClient({ chainId });
+
   const {
     amount,
     target,
@@ -69,15 +81,51 @@ export const useWithdraw = () => {
     feeCommitment,
   } = usePoolAccountsContext();
 
-  const {
-    selectedPoolInfo,
-    chainId,
-    selectedRelayer,
-    relayersData,
-    balanceBN: { decimals },
-  } = useChainContext();
-  const { accountService, addWithdrawal } = useAccountContext();
-  const publicClient = usePublicClient({ chainId });
+  const amountBN = parseUnits(amount, decimals);
+
+  const lastQuoteRequestRef = useRef(0);
+  const [throttledAmountBN, setThrottledAmountBN] = useState(amountBN);
+  const [throttledTarget, setThrottledTarget] = useState(target);
+  const [throttledChainId, setThrottledChainId] = useState(chainId);
+  const [throttledAssetAddress, setThrottledAssetAddress] = useState(selectedPoolInfo?.assetAddress);
+  const [throttledRelayer, setThrottledRelayer] = useState(currentSelectedRelayerData?.relayerAddress);
+
+  useEffect(() => {
+    const now = Date.now();
+    const THROTTLE_MS = 20_000;
+    if (
+      now - lastQuoteRequestRef.current > THROTTLE_MS ||
+      throttledAmountBN !== amountBN ||
+      throttledTarget !== target ||
+      throttledChainId !== chainId ||
+      throttledAssetAddress !== selectedPoolInfo?.assetAddress ||
+      throttledRelayer !== currentSelectedRelayerData?.relayerAddress
+    ) {
+      lastQuoteRequestRef.current = now;
+      setThrottledAmountBN(amountBN);
+      setThrottledTarget(target);
+      setThrottledChainId(chainId);
+      setThrottledAssetAddress(selectedPoolInfo?.assetAddress);
+      setThrottledRelayer(currentSelectedRelayerData?.relayerAddress);
+    }
+  }, [amountBN, target, chainId, selectedPoolInfo?.assetAddress, currentSelectedRelayerData?.relayerAddress]);
+
+  const { getQuote, isQuoteLoading, quoteError } = relayerData || {};
+  const { feeBPS } = useRequestQuote({
+    getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
+    isQuoteLoading: isQuoteLoading || false,
+    quoteError: quoteError || null,
+    chainId: throttledChainId,
+    amountBN: throttledAmountBN,
+    assetAddress: throttledAssetAddress,
+    recipient: throttledTarget,
+    isValidAmount: throttledAmountBN > 0n,
+    isRecipientAddressValid: !!throttledTarget,
+    isRelayerSelected: !!throttledRelayer,
+    addNotification,
+  });
+
+  console.log('feebps used:', feeBPS);
 
   const commitment = poolAccount?.lastCommitment;
   const aspLeaves = aspData.mtLeavesData?.aspLeaves;
@@ -201,7 +249,7 @@ export const useWithdraw = () => {
         !stateLeaves ||
         !relayerDetails ||
         !relayerDetails.relayerAddress ||
-        relayerDetails.fees === undefined ||
+        !feeBPS ||
         !accountService
       )
         throw new Error('Missing some required data to generate proof');
@@ -216,7 +264,7 @@ export const useWithdraw = () => {
           getAddress(target),
           getAddress(selectedPoolInfo.entryPointAddress),
           getAddress(relayerDetails.relayerAddress),
-          relayerDetails.fees,
+          feeBPS?.toString(),
         );
 
         poolScope = await getScope(publicClient, selectedPoolInfo?.address);
