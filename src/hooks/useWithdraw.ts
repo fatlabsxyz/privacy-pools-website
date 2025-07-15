@@ -172,7 +172,7 @@ export const useWithdraw = () => {
     ],
   );
 
-  const getPrivacyPoolErrorMessage = (errorMessage: string): string | null => {
+  const getPrivacyPoolErrorMessage = useCallback((errorMessage: string): string | null => {
     // Check for exact matches first
     for (const [contractError, userMessage] of Object.entries(PRIVACY_POOL_ERRORS)) {
       if (errorMessage.includes(contractError)) {
@@ -190,7 +190,7 @@ export const useWithdraw = () => {
     }
 
     return null;
-  };
+  }, []);
 
   const generateProof = useCallback(
     async (
@@ -370,7 +370,7 @@ export const useWithdraw = () => {
     ],
   );
 
-  const withdraw = async () => {
+  const withdraw = useCallback(async () => {
     if (!TEST_MODE) {
       const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
@@ -497,7 +497,64 @@ export const useWithdraw = () => {
     }
     setIsLoading(false);
     setIsClosable(true);
-  };
+  }, [
+    relayersData,
+    selectedRelayer?.url,
+    proof,
+    withdrawal,
+    commitment,
+    target,
+    feeCommitment,
+    newSecretKeys,
+    accountService,
+    switchChainAsync,
+    chainId,
+    publicClient,
+    selectedPoolInfo,
+    setIsClosable,
+    setIsLoading,
+    setTransactionHash,
+    setModalOpen,
+    addWithdrawal,
+    poolAccount,
+    getPrivacyPoolErrorMessage,
+    logErrorToSentry,
+    addNotification,
+    getDefaultErrorMessage,
+    relayerData,
+  ]);
 
-  return { withdraw, generateProof, isLoading };
+  const generateProofAndWithdraw = useCallback(
+    async (
+      onProgress?: (progress: {
+        phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof' | 'withdrawing';
+        progress: number;
+      }) => void,
+    ) => {
+      console.log('🚀 generateProofAndWithdraw() function called');
+
+      try {
+        // Generate proof first
+        await generateProof(onProgress);
+
+        // Update progress to withdrawal phase
+        if (onProgress) {
+          onProgress({ phase: 'withdrawing', progress: 0.8 });
+        }
+
+        // Now call withdraw with the proof data available
+        await withdraw();
+
+        if (onProgress) {
+          onProgress({ phase: 'withdrawing', progress: 1.0 });
+        }
+      } catch (error) {
+        console.error('❌ generateProofAndWithdraw failed:', error);
+        throw error;
+      }
+    },
+    [generateProof, withdraw],
+  );
+
+  return { withdraw, generateProof, generateProofAndWithdraw, isLoading };
 };

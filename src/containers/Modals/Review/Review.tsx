@@ -11,9 +11,9 @@ import { ExitMessage } from './ExitMessage';
 import { PoolAccountSection } from './PoolAccountSection';
 
 export const ReviewModal = () => {
-  const { isClosable } = useModal();
+  const { isClosable, setModalOpen } = useModal();
   const { deposit, isLoading: isDepositLoading } = useDeposit();
-  const { withdraw, isLoading: isWithdrawLoading } = useWithdraw();
+  const { isLoading: isWithdrawLoading } = useWithdraw();
   const { exit, isLoading: isExitLoading } = useExit();
   const { actionType } = usePoolAccountsContext();
 
@@ -23,7 +23,8 @@ export const ReviewModal = () => {
     if (actionType === EventType.DEPOSIT) {
       deposit();
     } else if (actionType === EventType.WITHDRAWAL) {
-      withdraw();
+      // For withdrawals, go directly to proof generation which will auto-withdraw
+      setModalOpen(ModalType.GENERATE_ZK_PROOF);
     } else if (actionType === EventType.EXIT) {
       exit();
     }

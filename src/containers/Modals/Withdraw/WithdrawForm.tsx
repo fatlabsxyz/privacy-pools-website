@@ -271,16 +271,7 @@ export const WithdrawForm = () => {
     } else {
       addNotification('error', 'Cannot proceed: relayer quote is invalid or expired.');
     }
-  }, [
-    quoteCommitment,
-    countdown,
-    setFeeCommitment,
-    setModalOpen,
-    addNotification,
-    feeBPS,
-    setFeeBPSForWithdraw,
-    isQuoteValid,
-  ]);
+  }, [quoteCommitment, countdown, setFeeCommitment, setModalOpen, addNotification, feeBPS, setFeeBPSForWithdraw]);
 
   const assetIcon = useMemo(() => {
     if (selectedPoolInfo?.asset === 'ETH') {
