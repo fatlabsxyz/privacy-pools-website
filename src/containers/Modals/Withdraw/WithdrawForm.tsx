@@ -5,23 +5,13 @@ import Image from 'next/image';
 import { Box, Button, CircularProgress, FormControl, SelectChangeEvent, Stack, styled, TextField } from '@mui/material';
 import { Address, formatUnits, getAddress, isAddress, parseUnits } from 'viem';
 import { CoinIcon, ImageContainer, InputContainer, ModalContainer, ModalTitle } from '~/containers/Modals/Deposit';
-import {
-  useChainContext,
-  useExternalServices,
-  useAccountContext,
-  useModal,
-  usePoolAccountsContext,
-  useNotifications,
-  useRequestQuote,
-} from '~/hooks';
+import { useChainContext, useAccountContext, useModal, usePoolAccountsContext, useNotifications } from '~/hooks';
 import { ModalType } from '~/types';
 import { getUsdBalance, relayerClient } from '~/utils';
 import { LinksSection } from '../LinksSection';
 import { AmountInputSection } from './AmountInputSection';
 import { PoolAccountSelectorSection } from './PoolAccountSelectorSection';
 import { RelayerSelectorSection } from './RelayerSelectorSection';
-
-const BPS_DIVISOR = 10000n;
 
 const minWithdrawCache = new Map<string, string>();
 
@@ -39,10 +29,7 @@ export const WithdrawForm = () => {
     price: currentPrice,
   } = useChainContext();
 
-  const { relayerData } = useExternalServices();
-  const { getQuote, isQuoteLoading: originalIsLoading, quoteError: originalQuoteError } = relayerData;
-  const { amount, setAmount, target, setTarget, poolAccount, setPoolAccount, setFeeCommitment, setFeeBPSForWithdraw } =
-    usePoolAccountsContext();
+  const { amount, setAmount, target, setTarget, poolAccount, setPoolAccount } = usePoolAccountsContext();
   const { poolAccounts } = useAccountContext();
 
   const decimals = selectedPoolInfo?.assetDecimals ?? balanceDecimals ?? 18;
@@ -139,41 +126,13 @@ export const WithdrawForm = () => {
     return isValidAmount && isRecipientAddressValid && !!selectedRelayer?.url && !!selectedPoolInfo?.assetAddress;
   }, [isValidAmount, isRecipientAddressValid, selectedRelayer, selectedPoolInfo?.assetAddress]);
 
-  const { quoteCommitment, feeBPS, isQuoteValid, countdown, isQuoteLoading, quoteError } = useRequestQuote({
-    getQuote,
-    isQuoteLoading: originalIsLoading,
-    quoteError: originalQuoteError,
-    chainId,
-    amountBN,
-    assetAddress: selectedPoolInfo?.assetAddress,
-    recipient: target,
-    isValidAmount,
-    isRecipientAddressValid,
-    isRelayerSelected: !!selectedRelayer?.url,
-    addNotification,
-  });
+  // Quote handling moved to Review screen
 
-  const feeText = useMemo(() => {
-    if (isQuoteLoading && !feeBPS) {
-      return 'Fetching fee quote...';
-    }
-    if (quoteError && !feeBPS) {
-      return 'Error fetching fee';
-    }
-    if (feeBPS === null) {
-      return '';
-    }
-
-    const feeFromQuote = (BigInt(feeBPS) * amountBN) / BPS_DIVISOR;
-    const formatted = formatUnits(feeFromQuote, decimals);
-    const usd = getUsdBalance(currentPrice, formatted, decimals);
-    const text = `Fee ${formatted} ${symbol} ~ ${usd} USD`;
-    return text;
-  }, [isQuoteLoading, quoteError, feeBPS, amountBN, decimals, currentPrice, symbol]);
+  const feeText = 'Fee will be calculated on review screen';
 
   const isWithdrawDisabled = useMemo(() => {
-    return !isFormValid || !isQuoteValid || isQuoteLoading;
-  }, [isFormValid, isQuoteValid, isQuoteLoading]);
+    return !isFormValid;
+  }, [isFormValid]);
 
   const errorMessage = useMemo(() => {
     if (amount && amountBN <= 0n) return 'Withdrawal amount must be greater than 0';
@@ -264,23 +223,9 @@ export const WithdrawForm = () => {
   }, [poolAccount, setAmount, decimals]);
 
   const handleWithdraw = useCallback(() => {
-    if (quoteCommitment && countdown > 0) {
-      setFeeCommitment(quoteCommitment);
-      setFeeBPSForWithdraw(feeBPS ? BigInt(feeBPS) : BigInt(0));
-      setModalOpen(ModalType.GENERATE_ZK_PROOF);
-    } else {
-      addNotification('error', 'Cannot proceed: relayer quote is invalid or expired.');
-    }
-  }, [
-    quoteCommitment,
-    countdown,
-    setFeeCommitment,
-    setModalOpen,
-    addNotification,
-    feeBPS,
-    setFeeBPSForWithdraw,
-    isQuoteValid,
-  ]);
+    // Go directly to Review screen - quote will be requested there
+    setModalOpen(ModalType.REVIEW);
+  }, [setModalOpen]);
 
   const assetIcon = useMemo(() => {
     if (selectedPoolInfo?.asset === 'ETH') {
@@ -348,11 +293,7 @@ export const WithdrawForm = () => {
           selectedRelayer={selectedRelayer}
           relayersData={relayersData}
           handleRelayerChange={handleRelayerChange}
-          isQuoteLoading={isQuoteLoading}
-          quoteError={quoteError}
           feeText={feeText}
-          isQuoteValid={isQuoteValid}
-          countdown={countdown}
         />
       </Stack>
 
@@ -361,10 +302,10 @@ export const WithdrawForm = () => {
         onClick={handleWithdraw}
         data-testid='confirm-withdrawal-button'
         sx={{ zIndex: 2 }}
-        startIcon={isQuoteLoading || isLoadingMinAmount ? <CircularProgress size={16} color='inherit' /> : null}
+        startIcon={isLoadingMinAmount ? <CircularProgress size={16} color='inherit' /> : null}
       >
-        {(isQuoteLoading || isLoadingMinAmount) && 'Getting Quote...'}
-        {!isQuoteLoading && !isLoadingMinAmount && 'Withdraw'}
+        {isLoadingMinAmount && 'Loading...'}
+        {!isLoadingMinAmount && 'Review Withdrawal'}
       </Button>
 
       <LinksSection />

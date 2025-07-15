@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { Stack, styled, Typography } from '@mui/material';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount } from 'wagmi';
@@ -22,7 +23,16 @@ export const DataSection = () => {
     chainId,
   } = useChainContext();
   const { currentSelectedRelayerData, relayerData } = useExternalServices();
-  const { amount, target, actionType, poolAccount, vettingFeeBPS, feeBPSForWithdraw } = usePoolAccountsContext();
+  const {
+    amount,
+    target,
+    actionType,
+    poolAccount,
+    vettingFeeBPS,
+    feeBPSForWithdraw,
+    setFeeCommitment,
+    setFeeBPSForWithdraw,
+  } = usePoolAccountsContext();
   const { addNotification } = useNotifications();
   const isDeposit = actionType === EventType.DEPOSIT;
 
@@ -33,8 +43,8 @@ export const DataSection = () => {
     countdown,
     isQuoteValid,
     isExpired,
-    requestNewQuote,
     feeBPS: quoteFeesBPS,
+    quoteCommitment,
   } = useRequestQuote({
     getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
     isQuoteLoading: isQuoteLoading || false,
@@ -48,6 +58,14 @@ export const DataSection = () => {
     isRelayerSelected: !!currentSelectedRelayerData?.relayerAddress,
     addNotification,
   });
+
+  // Set fee commitment when valid quote is available for withdrawals
+  useEffect(() => {
+    if (actionType === EventType.WITHDRAWAL && isQuoteValid && quoteCommitment && quoteFeesBPS) {
+      setFeeCommitment(quoteCommitment);
+      setFeeBPSForWithdraw(BigInt(quoteFeesBPS));
+    }
+  }, [actionType, isQuoteValid, quoteCommitment, quoteFeesBPS, setFeeCommitment, setFeeBPSForWithdraw]);
   const aspDataFees = (vettingFeeBPS * parseUnits(amount, decimals)) / 100n / 100n;
   const aspOrRelayer = {
     label: isDeposit ? 'ASP' : 'Relayer',
@@ -145,26 +163,15 @@ export const DataSection = () => {
               <Value variant='body2'>{feeText}</Value>
             </Tooltip>
           </Row>
-          {actionType === EventType.WITHDRAWAL && (
-            <>
-              {isQuoteValid && countdown > 0 && (
-                <Row>
-                  <Label variant='body2'>Quote expires:</Label>
-                  <QuoteTimer variant='body2'>in {countdown}s</QuoteTimer>
-                </Row>
+          {actionType === EventType.WITHDRAWAL && (isQuoteValid || isExpired) && (
+            <Row>
+              <Label variant='body2'>Quote expires:</Label>
+              {countdown > 0 ? (
+                <QuoteTimer variant='body2'>in {countdown}s</QuoteTimer>
+              ) : (
+                <FlashingExpiredTimer variant='body2'>Expired</FlashingExpiredTimer>
               )}
-              {isExpired && (
-                <Row>
-                  <Label variant='body2'>Quote status:</Label>
-                  <ExpiredQuote variant='body2'>
-                    Expired -
-                    <RefreshButton onClick={requestNewQuote} disabled={isQuoteLoading}>
-                      {isQuoteLoading ? 'Getting new quote...' : 'Request new quote'}
-                    </RefreshButton>
-                  </ExpiredQuote>
-                </Row>
-              )}
-            </>
+            </Row>
           )}
           <Row>
             <Label variant='body2'>Value:</Label>
@@ -236,31 +243,20 @@ const QuoteTimer = styled(Value)(({ theme }) => ({
   color: theme.palette.warning.main,
 }));
 
-const ExpiredQuote = styled(Value)(({ theme }) => ({
+const FlashingExpiredTimer = styled(Value)(({ theme }) => ({
   fontWeight: 500,
   color: theme.palette.error.main,
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
-}));
+  animation: 'flash 2s 3',
 
-const RefreshButton = styled('button')(({ theme }) => ({
-  background: 'none',
-  border: `1px solid ${theme.palette.primary.main}`,
-  color: theme.palette.primary.main,
-  padding: theme.spacing(0.5, 1),
-  borderRadius: theme.spacing(0.5),
-  fontSize: '1.2rem',
-  cursor: 'pointer',
-  marginLeft: theme.spacing(1),
-
-  '&:hover': {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-  },
-
-  '&:disabled': {
-    opacity: 0.6,
-    cursor: 'not-allowed',
+  '@keyframes flash': {
+    '0%, 50%': {
+      opacity: 1,
+    },
+    '25%, 75%': {
+      opacity: 0.3,
+    },
   },
 }));

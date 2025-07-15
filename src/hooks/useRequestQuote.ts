@@ -73,8 +73,6 @@ export const useRequestQuote = ({
       const newQuoteData = await getQuote(quoteInput);
 
       const remainingTime = calculateRemainingTime(newQuoteData.feeCommitment.expiration);
-      console.log('⏰ Calculated remaining time:', remainingTime, 'seconds');
-
       setQuoteData(newQuoteData.feeCommitment, Number(newQuoteData.feeBPS), remainingTime);
     } catch (err) {
       const errorMessage = `Failed to get quote: ${err instanceof Error ? err.message : 'Unknown error'}`;
