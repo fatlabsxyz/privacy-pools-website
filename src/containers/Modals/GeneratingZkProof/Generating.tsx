@@ -9,13 +9,13 @@ import { ModalTitle } from '../Deposit';
 import { AnimatedTree } from './AnimatedTree';
 
 interface ZKProofProgress {
-  phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof' | 'withdrawing';
+  phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof';
   progress: number;
 }
 
 export const GeneratingModal = () => {
   const { setModalOpen, modalOpen } = useModal();
-  const { generateProof: generateWithdrawalProof, generateProofAndWithdraw } = useWithdraw();
+  const { generateProof: generateWithdrawalProof } = useWithdraw();
   const { generateProof: generateRagequitProof } = useExit();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<ZKProofProgress>({ phase: 'loading_circuits', progress: 0 });
@@ -60,13 +60,20 @@ export const GeneratingModal = () => {
     if (!actionType) throw new Error('Action type not found');
 
     if (actionType === EventType.WITHDRAWAL) {
-      generateProofAndWithdraw(updateProgress)
+      generateWithdrawalProof(updateProgress)
         .then(() => {
-          // Proof generation and withdrawal completed successfully
-          console.log('✅ Proof generation and withdrawal completed successfully');
+          timeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+              setModalOpen((currentModal) => {
+                if (currentModal === ModalType.GENERATE_ZK_PROOF) {
+                  return ModalType.REVIEW;
+                }
+                return currentModal;
+              });
+            }
+          }, 1500);
         })
-        .catch((error) => {
-          console.error('❌ Proof generation or withdrawal failed:', error);
+        .catch(() => {
           if (isMountedRef.current) {
             setModalOpen((currentModal) => {
               if (currentModal === ModalType.GENERATE_ZK_PROOF) {
@@ -131,8 +138,6 @@ export const GeneratingModal = () => {
         return 'Generating proof...';
       case 'verifying_proof':
         return 'Verifying proof...';
-      case 'withdrawing':
-        return 'Executing withdrawal...';
       default:
         return 'Processing...';
     }
@@ -142,9 +147,9 @@ export const GeneratingModal = () => {
     <BaseModal type={ModalType.GENERATE_ZK_PROOF} hasBackground>
       <ModalContainer>
         <ModalTitle>
-          {actionType === EventType.WITHDRAWAL ? 'Processing' : 'Generating'}
+          Generating
           <br />
-          {actionType === EventType.WITHDRAWAL ? 'Withdrawal' : 'the ZK Proof'}
+          the ZK Proof
         </ModalTitle>
 
         <ProgressContainer>
