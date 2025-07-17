@@ -33,30 +33,35 @@ export async function proveWithdrawal(
 
   return {
     proof: {
-      pA: ['0x1234', '0x5678'],
-      pB: [
+      pi_a: ['0x1234', '0x5678'],
+      pi_b: [
         ['0x91011', '0x1213'],
         ['0x1415', '0x1617'],
       ],
-      pC: ['0x1819', '0x2021'],
+      pi_c: ['0x1819', '0x2021'],
+      protocol: 'groth16',
+      curve: 'bn128',
     },
     publicSignals: ['1', '2', '3', '4', '5', '6', '7', '8'],
   };
 }
 
 export async function proveCommitment(
-  _value: Commitment['preimage']['value'],
-  _label: Commitment['preimage']['label'],
-  _nullifier: Commitment['preimage']['nullifier'],
-  _secret: Commitment['preimage']['secret'],
+  _value: unknown,
+  _label: unknown,
+  _nullifier: unknown,
+  _secret: unknown,
 ): Promise<RagequitProof> {
   return {
-    pA: [BigInt(1), BigInt(2)],
-    pB: [
-      [BigInt(3), BigInt(4)],
-      [BigInt(5), BigInt(6)],
-    ],
-    pC: [BigInt(7), BigInt(8)],
-    pubSignals: [BigInt(1), BigInt(2), BigInt(3), BigInt(4), BigInt(5)],
+    proof: {
+      pi_a: [BigInt(1), BigInt(2), BigInt(3)],
+      pi_b: [
+        [BigInt(3), BigInt(4)],
+        [BigInt(5), BigInt(6)],
+        [BigInt(7), BigInt(8)],
+      ],
+      pi_c: [BigInt(9), BigInt(10), BigInt(11)],
+    },
+    publicSignals: [BigInt(1), BigInt(2), BigInt(3), BigInt(4), BigInt(5)],
   };
 }

@@ -294,6 +294,10 @@ export const WithdrawForm = () => {
           relayersData={relayersData}
           handleRelayerChange={handleRelayerChange}
           feeText={feeText}
+          isQuoteLoading={false}
+          quoteError={null}
+          isQuoteValid={false}
+          countdown={0}
         />
       </Stack>
 

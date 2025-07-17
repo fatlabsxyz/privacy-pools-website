@@ -49,6 +49,7 @@ export const useRequestQuote = ({
 }: UseRequestQuoteParams): UseRequestQuoteReturn => {
   const { quoteState, setQuoteData, updateCountdown, resetQuote, markAsExpired } = useQuoteContext();
   const isFetchingRef = useRef(false);
+  const previousExtraGasRef = useRef(quoteState.extraGas);
 
   const canRequestQuote = useMemo(() => {
     return (
@@ -112,11 +113,17 @@ export const useRequestQuote = ({
 
   // Effect to refetch quote when extraGas changes (only if we already have a quote)
   useEffect(() => {
-    if (canRequestQuote && quoteState.quoteCommitment && !quoteState.isExpired) {
+    if (
+      canRequestQuote &&
+      quoteState.quoteCommitment &&
+      !quoteState.isExpired &&
+      previousExtraGasRef.current !== quoteState.extraGas
+    ) {
       // Just refetch without resetting to avoid infinite loop
       executeFetchAndSetQuote();
+      previousExtraGasRef.current = quoteState.extraGas;
     }
-  }, [quoteState.extraGas]);
+  }, [quoteState.extraGas, canRequestQuote, quoteState.quoteCommitment, quoteState.isExpired, executeFetchAndSetQuote]);
 
   // Effect to handle the countdown timer - NO auto-refetch on expiry
   useEffect(() => {

@@ -30,9 +30,9 @@ export const useExit = () => {
     (error: Error | unknown, context: Record<string, unknown>) => {
       // Filter out expected user behavior errors
       if (error && typeof error === 'object') {
-        const message = error.message || '';
-        const errorName = error.name || '';
-        const errorCode = error.code;
+        const message = 'message' in error ? String(error.message) : '';
+        const errorName = 'name' in error ? String(error.name) : '';
+        const errorCode = 'code' in error ? error.code : undefined;
 
         // Don't log wallet rejections and user behavior errors
         if (
@@ -306,7 +306,7 @@ export const useExit = () => {
     ) => {
       try {
         const proof = await generateProof(onProgress);
-        await exit(proof as RagequitProof);
+        await exit(proof as unknown as RagequitProof);
       } catch (error) {
         console.error('❌ generateProofAndExit failed:', error);
         throw error;

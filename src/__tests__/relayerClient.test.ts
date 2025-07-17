@@ -30,7 +30,14 @@ describe('relayerClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: (): Promise<FeesResponse> =>
-          Promise.resolve({ feeBPS: MOCK_RELAYER.feeBPS, feeReceiverAddress: MOCK_RELAYER.feeReceiverAddress }),
+          Promise.resolve({
+            feeBPS: MOCK_RELAYER.feeBPS,
+            feeReceiverAddress: MOCK_RELAYER.feeReceiverAddress,
+            chainId: chainId,
+            assetAddress: assetAddress,
+            minWithdrawAmount: '1000000000000000000',
+            maxGasPrice: '20000000000',
+          }),
       } as Response);
 
       const result = await relayerClient.fetchFees(relayerUrl, chainId, assetAddress);

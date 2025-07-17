@@ -13,7 +13,7 @@ import {
   usePoolAccountsContext,
   useChainContext,
 } from '~/hooks';
-import { Hash, ModalType, Secret, ProofRelayerPayload } from '~/types';
+import { Hash, ModalType, Secret, ProofRelayerPayload, WithdrawalRelayerPayload } from '~/types';
 import {
   prepareWithdrawRequest,
   getContext,
@@ -424,9 +424,9 @@ export const useWithdraw = () => {
           resetQuote();
 
           const res = await relayerData.relay({
-            withdrawal: currentWithdrawal,
-            proof: currentProof.proof as unknown as ProofRelayerPayload,
-            publicSignals: currentProof.publicSignals as unknown as string[],
+            withdrawal: currentWithdrawal as WithdrawalRelayerPayload,
+            proof: (currentProof as { proof: unknown }).proof as ProofRelayerPayload,
+            publicSignals: (currentProof as { publicSignals: unknown }).publicSignals as string[],
             scope: poolScope.toString(),
             chainId,
             feeCommitment,
@@ -501,8 +501,8 @@ export const useWithdraw = () => {
           addWithdrawal(accountService, {
             parentCommitment: commitment,
             value: poolAccount?.balance - _value,
-            nullifier: currentNewSecretKeys?.nullifier as Secret,
-            secret: currentNewSecretKeys?.secret as Secret,
+            nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
+            secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
             blockNumber: receipt.blockNumber,
             txHash: res.txHash as Hex,
           });
