@@ -74,6 +74,8 @@ export type QuoteRequestBody = {
   asset: string;
   /** The recipient address for the withdrawal. */
   recipient: string;
+  /** Whether to include native token drop for gas fees (optional, defaults to false). */
+  extraGas?: boolean;
 };
 
 /**
@@ -87,6 +89,8 @@ export type FeeCommitment = {
   withdrawalData: string;
   /** Relayer's signature committing to the fee and withdrawal data (hex string). */
   signedRelayerCommitment: string;
+  /** Whether native token drop for gas fees is enabled (optional). */
+  extraGas?: boolean;
 };
 
 /**

@@ -1,9 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Divider, Stack, styled } from '@mui/material';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  Stack,
+  styled,
+  FormControlLabel,
+  Switch,
+  Typography,
+} from '@mui/material';
 import { parseUnits } from 'viem';
 import { BaseModal } from '~/components';
+import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
   useDeposit,
   useExit,
@@ -29,6 +40,7 @@ export const ReviewModal = () => {
   const { isLoading: isExitLoading } = useExit();
   const { actionType, feeCommitment, amount, target } = usePoolAccountsContext();
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
+  const { quoteState, setExtraGas } = useQuoteContext();
 
   // Quote logic for withdrawals
   const {
@@ -38,6 +50,11 @@ export const ReviewModal = () => {
   } = useChainContext();
   const { currentSelectedRelayerData, relayerData } = useExternalServices();
   const { addNotification } = useNotifications();
+
+  // Helper function to determine if current asset is a stablecoin
+  const isStablecoin = (assetSymbol: string): boolean => {
+    return ['USDT', 'USDC', 'USDS'].includes(assetSymbol);
+  };
 
   const amountBN = parseUnits(amount, decimals);
   const { getQuote, isQuoteLoading } = relayerData || {};
@@ -102,6 +119,28 @@ export const ReviewModal = () => {
         <PoolAccountSection />
 
         {actionType === EventType.EXIT && <ExitMessage />}
+
+        {actionType === EventType.WITHDRAWAL && isStablecoin(selectedPoolInfo?.asset || '') && (
+          <NativeTokenDropSection>
+            <Typography variant='h6' gutterBottom>
+              Gas Token Drop
+            </Typography>
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+              Get some ETH sent to your withdrawal address to cover gas fees for future transactions. This will increase
+              your withdrawal fee by ~3 swap transactions.
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={quoteState.extraGas}
+                  onChange={(e) => setExtraGas(e.target.checked)}
+                  disabled={isQuoteLoading}
+                />
+              }
+              label='Include native token drop for gas fees'
+            />
+          </NativeTokenDropSection>
+        )}
 
         {actionType === EventType.WITHDRAWAL && isExpired ? (
           <PulsingButton
@@ -168,3 +207,12 @@ const PulsingButton = styled(Button)({
     },
   },
 });
+
+const NativeTokenDropSection = styled(Box)(({ theme }) => ({
+  padding: '1.5rem',
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: '8px',
+  border: `1px solid ${theme.palette.divider}`,
+  margin: '1rem 0',
+  maxWidth: '400px',
+}));

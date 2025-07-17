@@ -69,7 +69,13 @@ export const useRequestQuote = ({
 
     isFetchingRef.current = true;
     try {
-      const quoteInput = { chainId, amount: amountBN.toString(), asset: assetAddress, recipient };
+      const quoteInput = {
+        chainId,
+        amount: amountBN.toString(),
+        asset: assetAddress,
+        recipient,
+        extraGas: quoteState.extraGas,
+      };
       const newQuoteData = await getQuote(quoteInput);
 
       const remainingTime = calculateRemainingTime(newQuoteData.feeCommitment.expiration);
@@ -88,6 +94,7 @@ export const useRequestQuote = ({
     amountBN,
     assetAddress,
     recipient,
+    quoteState.extraGas,
     getQuote,
     addNotification,
     resetQuote,
@@ -102,6 +109,14 @@ export const useRequestQuote = ({
       resetQuote();
     }
   }, [canRequestQuote, executeFetchAndSetQuote, resetQuote, quoteState.quoteCommitment, quoteState.isExpired]);
+
+  // Effect to refetch quote when extraGas changes (only if we already have a quote)
+  useEffect(() => {
+    if (canRequestQuote && quoteState.quoteCommitment && !quoteState.isExpired) {
+      // Just refetch without resetting to avoid infinite loop
+      executeFetchAndSetQuote();
+    }
+  }, [quoteState.extraGas]);
 
   // Effect to handle the countdown timer - NO auto-refetch on expiry
   useEffect(() => {

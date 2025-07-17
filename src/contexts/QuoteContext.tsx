@@ -8,6 +8,7 @@ interface QuoteState {
   feeBPS: number | null;
   countdown: number;
   isExpired: boolean;
+  extraGas: boolean;
 }
 
 interface QuoteContextType {
@@ -16,6 +17,7 @@ interface QuoteContextType {
   updateCountdown: (countdown: number) => void;
   resetQuote: () => void;
   markAsExpired: () => void;
+  setExtraGas: (extraGas: boolean) => void;
 }
 
 const QuoteContext = createContext<QuoteContextType | undefined>(undefined);
@@ -26,15 +28,17 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     feeBPS: null,
     countdown: 0,
     isExpired: false,
+    extraGas: false,
   });
 
   const setQuoteData = useCallback((commitment: FeeCommitment, feeBPS: number, countdown: number) => {
-    setQuoteState({
+    setQuoteState((prev) => ({
       quoteCommitment: commitment,
       feeBPS,
       countdown,
       isExpired: false,
-    });
+      extraGas: prev.extraGas, // Preserve current extraGas setting
+    }));
   }, []);
 
   const updateCountdown = useCallback((countdown: number) => {
@@ -46,12 +50,13 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetQuote = useCallback(() => {
-    setQuoteState({
+    setQuoteState((prev) => ({
       quoteCommitment: null,
       feeBPS: null,
       countdown: 0,
       isExpired: false,
-    });
+      extraGas: prev.extraGas, // Preserve extraGas setting when resetting quote
+    }));
   }, []);
 
   const markAsExpired = useCallback(() => {
@@ -59,6 +64,13 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       ...prev,
       isExpired: true,
       countdown: 0,
+    }));
+  }, []);
+
+  const setExtraGas = useCallback((extraGas: boolean) => {
+    setQuoteState((prev) => ({
+      ...prev,
+      extraGas,
     }));
   }, []);
 
@@ -70,6 +82,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         updateCountdown,
         resetQuote,
         markAsExpired,
+        setExtraGas,
       }}
     >
       {children}
