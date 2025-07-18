@@ -52,6 +52,7 @@ export const useRequestQuote = ({
   const { quoteState, setQuoteData, updateCountdown, resetQuote, markAsExpired } = useQuoteContext();
   const isFetchingRef = useRef(false);
   const previousExtraGasRef = useRef(quoteState.extraGas);
+  const expiredNotificationSentRef = useRef<string | null>(null);
 
   const canRequestQuote = useMemo(() => {
     return (
@@ -82,6 +83,10 @@ export const useRequestQuote = ({
       const newQuoteData = await getQuote(quoteInput);
 
       const remainingTime = calculateRemainingTime(newQuoteData.feeCommitment.expiration);
+
+      // Reset the notification flag for the new quote
+      expiredNotificationSentRef.current = null;
+
       setQuoteData(
         newQuoteData.feeCommitment,
         Number(newQuoteData.feeBPS),
@@ -145,7 +150,13 @@ export const useRequestQuote = ({
         if (quoteState.countdown - 1 <= 0) {
           clearInterval(timerId);
           markAsExpired();
-          addNotification('warning', 'Quote has expired. Please request a new quote.');
+
+          // Only send notification once per quote
+          const currentQuoteId = quoteState.quoteCommitment?.signedRelayerCommitment;
+          if (currentQuoteId && expiredNotificationSentRef.current !== currentQuoteId) {
+            expiredNotificationSentRef.current = currentQuoteId;
+            addNotification('warning', 'Quote has expired. Please request a new quote.');
+          }
         }
       }, 1000);
     }
