@@ -98,12 +98,18 @@ export const DataSection = () => {
     const decimalPart = valueStr.slice(-decimals);
     const result = `${integerPart}.${decimalPart}`;
 
-    // If all decimal places are zero, show only 2 decimal places
-    if (decimalPart.replace(/0/g, '').length === 0) {
-      return `${integerPart}.00`;
+    // Remove trailing zeros, but keep at least 2 decimal places
+    const trimmed = result.replace(/\.?0+$/, '');
+    if (!trimmed.includes('.')) {
+      return `${trimmed}.00`;
+    }
+    const decimalIndex = trimmed.indexOf('.');
+    const currentDecimals = trimmed.length - decimalIndex - 1;
+    if (currentDecimals < 2) {
+      return trimmed + '0'.repeat(2 - currentDecimals);
     }
 
-    return result;
+    return trimmed;
   };
 
   const feesCollectorAddress = isDeposit
@@ -318,7 +324,7 @@ const FlashingExpiredTimer = styled(Value)(({ theme }) => ({
 const FeeRow = styled('div')({
   display: 'flex',
   alignItems: 'center',
-  gap: '8px',
+  gap: '4px',
 });
 
 const NetFeeValue = styled(Value, {
@@ -331,11 +337,16 @@ const NetFeeValue = styled(Value, {
 const ExpandIconButton = styled(IconButton, {
   shouldForwardProp: (prop) => prop !== 'expanded',
 })<{ expanded?: boolean }>(({ theme, expanded }) => ({
-  padding: '4px',
+  padding: '2px',
+  minWidth: '24px',
+  minHeight: '24px',
   transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
   transition: theme.transitions.create('transform', {
     duration: theme.transitions.duration.shortest,
   }),
+  '& .MuiSvgIcon-root': {
+    fontSize: '18px',
+  },
 }));
 
 const FeeBreakdownContainer = styled('div')({
