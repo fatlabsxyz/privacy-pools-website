@@ -96,7 +96,14 @@ export const DataSection = () => {
     }
     const integerPart = valueStr.slice(0, -decimals);
     const decimalPart = valueStr.slice(-decimals);
-    return `${integerPart}.${decimalPart}`;
+    const result = `${integerPart}.${decimalPart}`;
+
+    // If all decimal places are zero, show only 2 decimal places
+    if (decimalPart.replace(/0/g, '').length === 0) {
+      return `${integerPart}.00`;
+    }
+
+    return result;
   };
 
   const feesCollectorAddress = isDeposit

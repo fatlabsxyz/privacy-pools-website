@@ -80,7 +80,13 @@ export const FeeBreakdown = ({ feeBPS, baseFeeBPS, extraGasAmountETH, amount }: 
 
   // Extra gas amount (convert from wei to ETH)
   const extraGasETH = extraGasAmountETH ? parseFloat(formatUnits(BigInt(extraGasAmountETH), 18)) : null;
-  const extraGasETHFormatted = extraGasETH ? extraGasETH.toFixed(10).replace(/\.?0+$/, '') : null;
+  const extraGasETHFormatted = extraGasETH
+    ? (() => {
+        const formatted = extraGasETH.toFixed(10).replace(/\.?0+$/, '');
+        // If it's a whole number (no decimal point), show .00
+        return formatted.includes('.') ? formatted : `${formatted}.00`;
+      })()
+    : null;
   const extraGasUSD = extraGasETH ? (extraGasETH * price).toFixed(2) : null;
 
   return (
