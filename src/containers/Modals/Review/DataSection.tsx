@@ -126,7 +126,9 @@ export const DataSection = () => {
     // Convert extraGasAmountETH from wei to token amount
     const extraGasETH = parseFloat(formatUnits(BigInt(quoteExtraGasAmountETH), 18));
     const extraGasInToken = (extraGasETH * price) / parseFloat(formatUnits(parseUnits('1', decimals), decimals));
-    const extraGasAmountBN = parseUnits(extraGasInToken.toString(), decimals);
+
+    // Convert to fixed decimal string to avoid scientific notation
+    const extraGasAmountBN = parseUnits(extraGasInToken.toFixed(decimals), decimals);
     netFeeAmount = fees + extraGasAmountBN;
   }
   const netFeeFormatted = formatUnits(netFeeAmount, decimals);
