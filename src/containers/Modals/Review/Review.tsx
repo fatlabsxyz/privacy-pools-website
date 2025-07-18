@@ -126,8 +126,7 @@ export const ReviewModal = () => {
               Gas Token Drop
             </Typography>
             <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-              Get some ETH sent to your withdrawal address to cover gas fees for future transactions. This will increase
-              your withdrawal fee by 1 swap + 1 transfer.
+              Get ETH for gas fees (1 swap + 1 transfer)
             </Typography>
             <FormControlLabel
               control={
