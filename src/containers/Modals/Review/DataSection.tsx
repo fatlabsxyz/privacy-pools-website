@@ -1,9 +1,11 @@
 'use client';
-import { useEffect } from 'react';
-import { Stack, styled, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import { Stack, styled, Typography, IconButton, Collapse } from '@mui/material';
 import { formatUnits, parseUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { ExtendedTooltip as Tooltip } from '~/components';
+import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
   useExternalServices,
   usePoolAccountsContext,
@@ -13,9 +15,12 @@ import {
 } from '~/hooks';
 import { EventType } from '~/types';
 import { getUsdBalance, truncateAddress } from '~/utils';
+import { FeeBreakdown } from './FeeBreakdown';
 
 export const DataSection = () => {
   const { address } = useAccount();
+  const [isFeeBreakdownOpen, setIsFeeBreakdownOpen] = useState(false);
+  const { quoteState } = useQuoteContext();
   const {
     balanceBN: { symbol, decimals },
     price,
@@ -44,6 +49,8 @@ export const DataSection = () => {
     isQuoteValid,
     isExpired,
     feeBPS: quoteFeesBPS,
+    baseFeeBPS: quoteBaseFeeBPS,
+    extraGasAmountETH: quoteExtraGasAmountETH,
     quoteCommitment,
   } = useRequestQuote({
     getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
@@ -98,14 +105,29 @@ export const DataSection = () => {
   const feesCollector = `OxBow (${truncateAddress(feesCollectorAddress)})`;
 
   const amountUSD = getUsdBalance(price, amount, decimals);
+
+  // Value is now the actual amount being withdrawn (amount minus fees)
   const amountWithFeeBN = parseUnits(amount, decimals) - fees;
   const amountWithFee = formatUnits(amountWithFeeBN, decimals);
   const amountWithFeeUSD = getUsdBalance(price, amountWithFee, decimals);
-
-  const valueText = `${amountWithFee} ${symbol} (~ ${amountWithFeeUSD} USD)`;
+  const valueText = `${parseFloat(amountWithFee).toString()} ${symbol} (~$${parseFloat(amountWithFeeUSD.replace('$', '')).toFixed(2)} USD)`;
   const valueTooltip = `${formatFullPrecision(amountWithFeeBN, decimals)} ${symbol}`;
 
-  const totalText = `~${amount.slice(0, 6)} ${symbol} (~ ${amountUSD} USD)`;
+  // Net Fee calculation (includes extra gas amount if enabled)
+  let netFeeAmount = fees;
+  if (quoteState.extraGas && quoteExtraGasAmountETH) {
+    // Convert extraGasAmountETH from wei to token amount
+    const extraGasETH = parseFloat(formatUnits(BigInt(quoteExtraGasAmountETH), 18));
+    const extraGasInToken = (extraGasETH * price) / parseFloat(formatUnits(parseUnits('1', decimals), decimals));
+    const extraGasAmountBN = parseUnits(extraGasInToken.toString(), decimals);
+    netFeeAmount = fees + extraGasAmountBN;
+  }
+  const netFeeFormatted = formatUnits(netFeeAmount, decimals);
+  const netFeeUSD = getUsdBalance(price, netFeeFormatted, decimals);
+  const netFeeText = `${parseFloat(netFeeFormatted).toString()} ${symbol} (~$${parseFloat(netFeeUSD.replace('$', '')).toFixed(2)} USD)`;
+  const netFeeTooltip = `${formatFullPrecision(netFeeAmount, decimals)} ${symbol}`;
+
+  const totalText = `~${amount.slice(0, 6)} ${symbol} (~$${parseFloat(amountUSD.replace('$', '')).toFixed(2)} USD)`;
   const totalAmountBN = parseUnits(amount, decimals);
   const totalTooltip = `${formatFullPrecision(totalAmountBN, decimals)} ${symbol}`;
 
@@ -168,6 +190,40 @@ export const DataSection = () => {
               <Value variant='body2'>{valueText}</Value>
             </Tooltip>
           </Row>
+
+          {/* Net Fee row with dropdown for withdrawals */}
+          {actionType === EventType.WITHDRAWAL && isQuoteValid && quoteFeesBPS !== null && quoteBaseFeeBPS !== null && (
+            <>
+              <Row>
+                <Label variant='body2'>Net Fee:</Label>
+                <FeeRow>
+                  <Tooltip title={netFeeTooltip} placement='top'>
+                    <NetFeeValue isExtraGasEnabled={quoteState.extraGas} variant='body2'>
+                      {netFeeText}
+                    </NetFeeValue>
+                  </Tooltip>
+                  <ExpandIconButton
+                    onClick={() => setIsFeeBreakdownOpen(!isFeeBreakdownOpen)}
+                    expanded={isFeeBreakdownOpen}
+                  >
+                    <ExpandMoreIcon />
+                  </ExpandIconButton>
+                </FeeRow>
+              </Row>
+
+              {/* Collapsible Fee Breakdown */}
+              <Collapse in={isFeeBreakdownOpen}>
+                <FeeBreakdownContainer>
+                  <FeeBreakdown
+                    feeBPS={quoteFeesBPS}
+                    baseFeeBPS={quoteBaseFeeBPS}
+                    extraGasAmountETH={quoteExtraGasAmountETH}
+                    amount={amount}
+                  />
+                </FeeBreakdownContainer>
+              </Collapse>
+            </>
+          )}
         </Stack>
       )}
 
@@ -249,3 +305,31 @@ const FlashingExpiredTimer = styled(Value)(({ theme }) => ({
     },
   },
 }));
+
+const FeeRow = styled('div')({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+});
+
+const NetFeeValue = styled(Value, {
+  shouldForwardProp: (prop) => prop !== 'isExtraGasEnabled',
+})<{ isExtraGasEnabled?: boolean }>(({ theme, isExtraGasEnabled }) => ({
+  color: isExtraGasEnabled ? theme.palette.success.main : theme.palette.text.primary,
+  fontWeight: isExtraGasEnabled ? 600 : 400,
+}));
+
+const ExpandIconButton = styled(IconButton, {
+  shouldForwardProp: (prop) => prop !== 'expanded',
+})<{ expanded?: boolean }>(({ theme, expanded }) => ({
+  padding: '4px',
+  transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+  transition: theme.transitions.create('transform', {
+    duration: theme.transitions.duration.shortest,
+  }),
+}));
+
+const FeeBreakdownContainer = styled('div')({
+  marginTop: '8px',
+  marginLeft: '16px',
+});
