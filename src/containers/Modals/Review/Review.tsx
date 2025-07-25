@@ -7,6 +7,7 @@ import { parseUnits } from 'viem';
 import { BaseModal } from '~/components';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
+  useAccountType,
   useDeposit,
   useExit,
   useModal,
@@ -32,6 +33,7 @@ export const ReviewModal = () => {
   const { actionType, feeCommitment, amount, target } = usePoolAccountsContext();
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
   const { quoteState, setExtraGas } = useQuoteContext();
+  const { supportsBatching } = useAccountType();
 
   // Quote logic for withdrawals
   const {
@@ -100,6 +102,22 @@ export const ReviewModal = () => {
         <ModalTitle>Review the {actionType}</ModalTitle>
 
         <Stack gap={2} px='1.6rem' width='100%'>
+          {actionType === EventType.DEPOSIT && supportsBatching && selectedPoolInfo?.asset !== 'ETH' && (
+            <SmartAccountSection>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SmartAccountIcon />
+                <Box>
+                  <Typography variant='body1' fontWeight={600}>
+                    Smart Account Detected
+                  </Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Approval + deposit will be executed as a single atomic transaction
+                  </Typography>
+                </Box>
+              </Box>
+            </SmartAccountSection>
+          )}
+
           {actionType === EventType.WITHDRAWAL && isStablecoin(selectedPoolInfo?.asset || '') && (
             <GasTokenDropSection>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -226,7 +244,22 @@ const GasTokenDropSection = styled(Box)(() => ({
   alignItems: 'center',
 }));
 
+const SmartAccountSection = styled(Box)(() => ({
+  padding: '1rem 1.5rem',
+  backgroundColor: '#e3f2fd',
+  borderRadius: '8px',
+  border: `1px solid #90caf9`,
+  margin: '0.5rem 0',
+  display: 'flex',
+  alignItems: 'center',
+}));
+
 const InfoIcon = styled(InfoOutlinedIcon)(() => ({
   color: '#66bb6a',
+  fontSize: '20px',
+}));
+
+const SmartAccountIcon = styled(InfoOutlinedIcon)(() => ({
+  color: '#42a5f5',
   fontSize: '20px',
 }));

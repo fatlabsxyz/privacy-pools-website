@@ -1,3 +1,4 @@
+export * from './useAccountType';
 export * from './useASP';
 export * from './useCustomConnect';
 export * from './useExternalServices';
