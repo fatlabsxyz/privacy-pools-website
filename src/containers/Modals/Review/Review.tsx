@@ -33,7 +33,7 @@ export const ReviewModal = () => {
   const { actionType, feeCommitment, amount, target } = usePoolAccountsContext();
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
   const { quoteState, setExtraGas } = useQuoteContext();
-  const { supportsBatching } = useAccountType();
+  const { accountType, supportsBatching, isSafeAccount, isERC4337Account } = useAccountType();
 
   // Quote logic for withdrawals
   const {
@@ -103,15 +103,21 @@ export const ReviewModal = () => {
 
         <Stack gap={2} px='1.6rem' width='100%'>
           {actionType === EventType.DEPOSIT && supportsBatching && selectedPoolInfo?.asset !== 'ETH' && (
-            <SmartAccountSection>
+            <SmartAccountSection walletType={accountType}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <SmartAccountIcon />
+                <SmartAccountIcon walletType={accountType} />
                 <Box>
                   <Typography variant='body1' fontWeight={600}>
-                    Smart Account Detected
+                    {accountType === 'MetaMask Smart Account' && 'MetaMask Smart Account Detected'}
+                    {isSafeAccount && 'Safe Wallet Detected'}
+                    {isERC4337Account && !isSafeAccount && `${accountType} Detected`}
                   </Typography>
                   <Typography variant='body2' color='text.secondary'>
-                    Approval + deposit will be executed as a single atomic transaction
+                    {isSafeAccount
+                      ? 'Approval + deposit will be batched and require owner signatures'
+                      : isERC4337Account
+                        ? 'Approval + deposit will be batched using ERC-4337 account abstraction'
+                        : 'Approval + deposit will be executed as a single atomic transaction'}
                   </Typography>
                 </Box>
               </Box>
@@ -244,22 +250,43 @@ const GasTokenDropSection = styled(Box)(() => ({
   alignItems: 'center',
 }));
 
-const SmartAccountSection = styled(Box)(() => ({
-  padding: '1rem 1.5rem',
-  backgroundColor: '#e3f2fd',
-  borderRadius: '8px',
-  border: `1px solid #90caf9`,
-  margin: '0.5rem 0',
-  display: 'flex',
-  alignItems: 'center',
-}));
+const getWalletColors = (walletType: string | null) => {
+  switch (walletType) {
+    case 'Safe Wallet':
+    case 'Safe App':
+      return { bg: '#e8f5e9', border: '#81c784', icon: '#4caf50' };
+    case 'MetaMask Smart Account':
+    default:
+      return { bg: '#e3f2fd', border: '#90caf9', icon: '#42a5f5' };
+  }
+};
+
+const SmartAccountSection = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'walletType',
+})<{ walletType?: string | null }>(({ walletType }) => {
+  const colors = getWalletColors(walletType);
+  return {
+    padding: '1rem 1.5rem',
+    backgroundColor: colors.bg,
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`,
+    margin: '0.5rem 0',
+    display: 'flex',
+    alignItems: 'center',
+  };
+});
 
 const InfoIcon = styled(InfoOutlinedIcon)(() => ({
   color: '#66bb6a',
   fontSize: '20px',
 }));
 
-const SmartAccountIcon = styled(InfoOutlinedIcon)(() => ({
-  color: '#42a5f5',
-  fontSize: '20px',
-}));
+const SmartAccountIcon = styled(InfoOutlinedIcon, {
+  shouldForwardProp: (prop) => prop !== 'walletType',
+})<{ walletType?: string | null }>(({ walletType }) => {
+  const colors = getWalletColors(walletType);
+  return {
+    color: colors.icon,
+    fontSize: '20px',
+  };
+});

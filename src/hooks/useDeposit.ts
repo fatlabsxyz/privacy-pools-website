@@ -22,6 +22,7 @@ import {
   getBatchStatus,
 } from '~/utils/eip7702';
 import { useModal } from './useModal';
+import { useSafeTransactions } from './useSafeTransactions';
 
 const {
   env: { TEST_MODE },
@@ -43,6 +44,8 @@ export const useDeposit = () => {
   const { accountService, poolAccounts, addPoolAccount } = useAccountContext();
   const { data: walletClient } = useWalletClient({ chainId });
   const publicClient = usePublicClient({ chainId });
+  const { isSafeApp, createSafeBatchTransaction, sendSafeBatchTransaction, waitForSafeTransaction } =
+    useSafeTransactions();
 
   const allowance = async (tokenAddress: Address, owner: Address, spender: Address) => {
     if (!publicClient) throw new Error('Public client not found');
@@ -58,7 +61,11 @@ export const useDeposit = () => {
     try {
       setIsClosable(false);
       setIsLoading(true);
-      await switchChainAsync({ chainId });
+
+      // Only switch chain if not already on the correct chain and not using Safe
+      if (!isSafeApp && walletClient?.chain?.id !== chainId) {
+        await switchChainAsync({ chainId });
+      }
 
       if (!accountService) throw new Error('AccountService not found');
       if (!address) throw new Error('Address not found');
@@ -69,11 +76,18 @@ export const useDeposit = () => {
         assetAllowance = await allowance(selectedPoolInfo.assetAddress, address, selectedPoolInfo.entryPointAddress);
       }
 
+      // Count only pool accounts for the current scope
+      const poolAccountsForScope = poolAccounts.filter((account) => account.scope === selectedPoolInfo.scope);
+
       const {
         nullifier,
         secret,
         precommitment: precommitmentHash,
-      } = createDepositSecrets(accountService, BigInt(selectedPoolInfo.scope) as Hash, BigInt(poolAccounts.length));
+      } = createDepositSecrets(
+        accountService,
+        BigInt(selectedPoolInfo.scope) as Hash,
+        BigInt(poolAccountsForScope.length),
+      );
       const value = parseUnits(amount, decimals);
 
       if (!TEST_MODE) {
@@ -108,13 +122,71 @@ export const useDeposit = () => {
           // ERC-20 token deposits - check for EIP-7702 batching support
           if (!selectedPoolInfo.assetAddress) throw new Error('Asset address missing for token deposit');
 
-          console.log('🔍 Checking EIP-7702 support for:', { address, chainId, assetAllowance, value });
+          // Check for batching support (MetaMask Smart Account or Safe)
+          console.log('🔍 Checking batching support for:', { address, chainId, assetAllowance, value });
+
+          // Check for Safe App environment using React SDK
+          console.log('🔍 Checking for Safe App and batching support...');
+          console.log('🔒 Safe App status:', { isSafeApp });
+
+          // Check for MetaMask Smart Account
           const supportsEIP7702 = await supportsEIP7702Batching(address, chainId);
           console.log('🎯 EIP-7702 support result:', supportsEIP7702);
           console.log('💰 Allowance check:', { assetAllowance, value, needsApproval: assetAllowance < value });
 
-          if (supportsEIP7702 && assetAllowance < value) {
-            console.log('✅ Using Smart Account batching path');
+          // Safe App batching path - prioritize Safe Apps SDK over legacy detection
+          if (isSafeApp && assetAllowance < value) {
+            console.log('✅ Using Safe App batching path');
+            addNotification('info', 'Using Safe App - batching approval + deposit...');
+
+            // Create the deposit call data
+            const depositCallData = encodeFunctionData({
+              abi: entrypointAbi,
+              functionName: 'deposit',
+              args: [selectedPoolInfo.assetAddress, value, precommitmentHash],
+            });
+
+            // Create Safe batch transaction using React SDK hook
+            const safeTxs = createSafeBatchTransaction(
+              selectedPoolInfo.assetAddress,
+              selectedPoolInfo.entryPointAddress,
+              value,
+              BigInt(vettingFeeBPS),
+              getAddress(selectedPoolInfo.entryPointAddress),
+              depositCallData,
+            );
+
+            // Send through Safe Apps SDK
+            const safeTxResponse = await sendSafeBatchTransaction(safeTxs);
+            console.log('🔒 Safe transaction response:', safeTxResponse);
+            console.log('🔒 Safe transaction response type:', typeof safeTxResponse);
+
+            // Ensure we have a string hash
+            const safeTxHash = typeof safeTxResponse === 'string' ? safeTxResponse : String(safeTxResponse);
+            console.log('🔒 Safe transaction hash:', safeTxHash);
+
+            // For Safe, show immediate notification about proposal
+            addNotification('info', 'Safe transaction proposed! Waiting for execution...');
+
+            // Immediately show processing modal with Safe tx hash
+            setTransactionHash(safeTxHash as ViemHash);
+            setModalOpen(ModalType.PROCESSING);
+
+            // Wait for the Safe transaction to be executed and get the actual transaction hash
+            const actualTxHash = await waitForSafeTransaction(safeTxHash);
+
+            if (!actualTxHash) {
+              throw new Error('Safe transaction was not executed within the timeout period');
+            }
+
+            // Update with the actual on-chain transaction hash
+            hash = actualTxHash as ViemHash;
+            setTransactionHash(hash);
+            console.log('✅ Using actual transaction hash:', hash);
+          }
+          // MetaMask Smart Account batching path
+          else if (supportsEIP7702 && assetAllowance < value) {
+            console.log('✅ Using MetaMask Smart Account batching path');
             // True single-transaction batching using MetaMask Smart Account wallet_sendCalls API
             addNotification('info', 'Using Smart Account - batching approval + deposit in single transaction...');
 
@@ -259,8 +331,25 @@ export const useDeposit = () => {
           }
         }
 
-        setTransactionHash(hash);
-        setModalOpen(ModalType.PROCESSING);
+        // For Safe, we need to handle the transaction hash differently
+        // Only check for ETH deposits (non-batched) through Safe
+        if (isSafeApp && selectedPoolInfo.asset === DEFAULT_ASSET && hash.startsWith('0x') && hash.length === 66) {
+          // For ETH deposits through Safe, check if this is a Safe transaction hash
+          console.log('🔍 Checking if this is a Safe transaction hash for ETH deposit:', hash);
+
+          // Try to wait for the actual transaction
+          const actualTxHash = await waitForSafeTransaction(hash);
+          if (actualTxHash) {
+            console.log('✅ Got actual transaction hash from Safe:', actualTxHash);
+            hash = actualTxHash as ViemHash;
+          }
+        }
+
+        // Only set transaction hash and modal if not already done in Safe batch path
+        if (!(isSafeApp && selectedPoolInfo.asset !== DEFAULT_ASSET && assetAllowance < value)) {
+          setTransactionHash(hash);
+          setModalOpen(ModalType.PROCESSING);
+        }
 
         const receipt = await publicClient?.waitForTransactionReceipt({
           hash,

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { addBreadcrumb, captureException, withScope } from '@sentry/nextjs';
 import { getAddress, Hex, parseUnits, TransactionExecutionError } from 'viem';
 import { generatePrivateKey } from 'viem/accounts';
-import { useAccount, usePublicClient, useSwitchChain } from 'wagmi';
+import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
 import { getConfig } from '~/config';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -12,6 +12,7 @@ import {
   useNotifications,
   usePoolAccountsContext,
   useChainContext,
+  useSafeApp,
 } from '~/hooks';
 import { Hash, ModalType, Secret, ProofRelayerPayload, WithdrawalRelayerPayload } from '~/types';
 import {
@@ -56,7 +57,9 @@ export const useWithdraw = () => {
   const { setModalOpen, setIsClosable } = useModal();
   const { aspData, relayerData } = useExternalServices();
   const { switchChainAsync } = useSwitchChain();
+  const { data: walletClient } = useWalletClient();
   const { resetQuote } = useQuoteContext();
+  const { isSafeApp } = useSafeApp();
   const {
     selectedPoolInfo,
     chainId,
@@ -412,7 +415,10 @@ export const useWithdraw = () => {
         )
           throw new Error('Missing required data to withdraw');
 
-        await switchChainAsync({ chainId });
+        // Only switch chain if not already on the correct chain and not using Safe
+        if (!isSafeApp && walletClient?.chain?.id !== chainId) {
+          await switchChainAsync({ chainId });
+        }
 
         const poolScope = await getScope(publicClient, selectedPoolInfo.address);
 

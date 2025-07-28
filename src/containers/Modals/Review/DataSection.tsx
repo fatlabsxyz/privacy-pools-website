@@ -196,7 +196,7 @@ export const DataSection = () => {
 
         <Row>
           <Label variant='body2'>To:</Label>
-          <Value variant='body2'>
+          <Value variant='body2' component='div'>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {ensAvatar && <Avatar src={ensAvatar} sx={{ width: 20, height: 20 }} />}
               <Tooltip title={toAddress} placement='top'>

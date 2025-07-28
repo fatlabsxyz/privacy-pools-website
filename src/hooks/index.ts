@@ -12,6 +12,8 @@ export * from './useWithdraw';
 export * from './useAdvancedView';
 export * from './useAccountManager';
 export * from './useRequestQuote';
+export * from './useSafeApp';
+export * from './useSafeTransactions';
 export * from '../contexts/QuoteContext';
 export * from './useCircuitPreloader';
 export * from './useZKProofWorker';
