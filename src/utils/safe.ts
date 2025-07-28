@@ -81,7 +81,7 @@ export const createSafeBatchTransaction = (
   tokenAddress: Address,
   spenderAddress: Address,
   amount: bigint,
-  vettingFeeBPS: bigint,
+  _vettingFeeBPS: bigint,
   depositTarget: Address,
   depositData: `0x${string}`,
 ) => {
@@ -186,7 +186,11 @@ export const getSafeTransactionStatus = async (safeTxHash: string): Promise<Tran
  * @param provider Web3 provider
  * @returns true if the address is a Safe wallet
  */
-export const isSafeWallet = async (address: Address, provider: unknown): Promise<boolean> => {
+interface Provider {
+  getCode: (address: Address) => Promise<string>;
+}
+
+export const isSafeWallet = async (address: Address, provider: Provider): Promise<boolean> => {
   try {
     const code = await provider.getCode(address);
 

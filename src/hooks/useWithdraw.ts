@@ -586,6 +586,8 @@ export const useWithdraw = () => {
       getDefaultErrorMessage,
       relayerData,
       resetQuote,
+      isSafeApp,
+      walletClient?.chain?.id,
     ],
   );
 

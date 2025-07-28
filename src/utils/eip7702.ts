@@ -50,13 +50,9 @@ interface BatchStatus {
   }>;
 }
 
-// Extend window.ethereum interface for MetaMask Smart Account APIs
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }
+// Type for ethereum provider
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
 }
 
 /**
@@ -66,7 +62,8 @@ export const checkBatchingCapability = async (address: Address, chainId: number)
   try {
     console.log('🔍 Checking batching capability for:', { address, chainId });
 
-    if (!window.ethereum) {
+    const ethereum = window.ethereum as EthereumProvider | undefined;
+    if (!ethereum) {
       console.log('❌ No window.ethereum found');
       return false;
     }
@@ -74,7 +71,7 @@ export const checkBatchingCapability = async (address: Address, chainId: number)
     const chainIdHex = `0x${chainId.toString(16)}`;
     console.log('📞 Calling wallet_getCapabilities with params:', [address, [chainIdHex]]);
 
-    const capabilities = (await window.ethereum.request({
+    const capabilities = (await ethereum.request({
       method: 'wallet_getCapabilities',
       params: [address, [chainIdHex]],
     })) as WalletCapabilities;
@@ -113,13 +110,14 @@ export const checkAccountBytecode = async (address: Address): Promise<boolean> =
     console.log('🔍 Checking account bytecode for EIP-7702 delegation');
 
     // Create a simple JSON-RPC request to check bytecode
-    const response = await window.ethereum?.request({
+    const ethereum = window.ethereum as EthereumProvider | undefined;
+    const response = (await ethereum?.request({
       method: 'eth_getCode',
       params: [address, 'latest'],
-    });
+    })) as string | undefined;
 
     console.log('📄 Account bytecode:', response);
-    const hasBytecode = response && response !== '0x' && response.length > 2;
+    const hasBytecode = !!(response && response !== '0x' && response.length > 2);
     console.log('✅ Has bytecode (delegated):', hasBytecode);
 
     return hasBytecode;
@@ -142,7 +140,7 @@ export const detectAccountType = async (address: Address, chainId: number): Prom
     // Method 2: If capability detection fails, try bytecode check
     if (!supportsBatching) {
       console.log('⚠️ Capability detection failed, trying bytecode check...');
-      const hasBytecode = await checkAccountBytecode(address, chainId);
+      const hasBytecode = await checkAccountBytecode(address);
 
       if (hasBytecode) {
         console.log('✅ Account has bytecode, assuming MetaMask Smart Account');
@@ -173,7 +171,8 @@ export const supportsEIP7702Batching = async (address: Address, chainId: number)
 export const sendBatchTransaction = async (calls: BatchCall[], address: Address, chainId: number): Promise<string> => {
   console.log('🚀 Sending batch transaction:', { calls, address, chainId });
 
-  if (!window.ethereum) {
+  const ethereum = window.ethereum as EthereumProvider | undefined;
+  if (!ethereum) {
     throw new Error('MetaMask not available');
   }
 
@@ -188,7 +187,7 @@ export const sendBatchTransaction = async (calls: BatchCall[], address: Address,
   console.log('📦 Batch params:', JSON.stringify(params, null, 2));
 
   try {
-    const response = (await window.ethereum.request({
+    const response = (await ethereum.request({
       method: 'wallet_sendCalls',
       params: [params],
     })) as { id: string };
@@ -216,7 +215,8 @@ export const sendBatchTransaction = async (calls: BatchCall[], address: Address,
 export const getBatchStatus = async (batchId: string): Promise<BatchStatus> => {
   console.log('📊 Getting batch status for ID:', batchId, typeof batchId);
 
-  if (!window.ethereum) {
+  const ethereum = window.ethereum as EthereumProvider | undefined;
+  if (!ethereum) {
     throw new Error('MetaMask not available');
   }
 
@@ -225,7 +225,7 @@ export const getBatchStatus = async (batchId: string): Promise<BatchStatus> => {
   console.log('📊 Calling wallet_getCallsStatus with:', batchIdString);
 
   try {
-    const status = (await window.ethereum.request({
+    const status = (await ethereum.request({
       method: 'wallet_getCallsStatus',
       params: [batchIdString],
     })) as BatchStatus;

@@ -229,7 +229,7 @@ export const useExit = () => {
             const actualTxHash = await waitForSafeTransaction(hash);
             if (actualTxHash) {
               console.log('✅ Got actual transaction hash from Safe:', actualTxHash);
-              hash = actualTxHash as Hash;
+              hash = actualTxHash as `0x${string}`;
             }
           }
 
@@ -321,6 +321,8 @@ export const useExit = () => {
       logErrorToSentry,
       getDefaultErrorMessage,
       addNotification,
+      isSafeApp,
+      waitForSafeTransaction,
     ],
   );
 

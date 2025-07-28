@@ -10,13 +10,17 @@ export const KNOWN_ADDRESSES = {
   SAFE_FACTORY: '0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2',
 } as const;
 
+interface BytecodeProvider {
+  getBytecode: (args: { address: Address }) => Promise<string | undefined>;
+}
+
 /**
  * Detects if an address is a smart contract by checking bytecode
  */
-export const isSmartContract = async (address: Address, provider: unknown): Promise<boolean> => {
+export const isSmartContract = async (address: Address, provider: BytecodeProvider): Promise<boolean> => {
   try {
     const code = await provider.getBytecode({ address });
-    return code && code !== '0x' && code.length > 2;
+    return code !== undefined && code !== '0x' && code.length > 2;
   } catch (error) {
     console.error('Error checking bytecode:', error);
     return false;
@@ -26,7 +30,7 @@ export const isSmartContract = async (address: Address, provider: unknown): Prom
 /**
  * Comprehensive smart wallet detection
  */
-export const detectSmartWalletType = async (address: Address, provider: unknown): Promise<SmartWalletType> => {
+export const detectSmartWalletType = async (address: Address, provider: BytecodeProvider): Promise<SmartWalletType> => {
   try {
     console.log('🔍 Detecting smart wallet type for:', address);
 

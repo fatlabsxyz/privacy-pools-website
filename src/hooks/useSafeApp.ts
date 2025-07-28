@@ -9,7 +9,6 @@ export interface SafeAppInfo {
   safe: {
     safeAddress: string;
     chainId: number;
-    network: string;
   } | null;
   sdk: unknown; // Safe Apps SDK instance
 }
@@ -35,7 +34,6 @@ export const useSafeApp = (): SafeAppInfo => {
         ? {
             safeAddress: safe.safeAddress,
             chainId: safe.chainId,
-            network: safe.network || 'unknown',
           }
         : null,
     sdk,
