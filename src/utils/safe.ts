@@ -8,6 +8,12 @@ export type SafeAccountType = 'Not Safe' | 'Safe App' | 'Safe WalletConnect' | '
 // Safe Apps SDK instance - only initialize if running in Safe App context
 let safeAppsSdk: SafeAppsSDK | null = null;
 
+// Export for testing purposes
+export const getSafeAppsSdk = () => safeAppsSdk;
+export const setSafeAppsSdk = (sdk: SafeAppsSDK | null) => {
+  safeAppsSdk = sdk;
+};
+
 /**
  * Detects if the current environment is a Safe wallet
  * @returns SafeAccountType indicating the type of Safe connection
@@ -18,8 +24,16 @@ export const detectSafeEnvironment = async (): Promise<{
   safeInfo?: SafeInfo;
 }> => {
   try {
+    // Check if window is available
+    if (typeof window === 'undefined') {
+      return {
+        isSafe: false,
+        safeType: 'Unknown',
+      };
+    }
+
     // Method 1: Check if running inside Safe App (iframe)
-    if (typeof window !== 'undefined' && window.parent !== window) {
+    if (window.parent !== window) {
       console.log('🔍 Checking for Safe App environment (iframe)...');
 
       try {
@@ -48,7 +62,7 @@ export const detectSafeEnvironment = async (): Promise<{
     // Method 2: Check if connected via WalletConnect to a Safe
     // This requires checking the connected account's bytecode
     // Safe wallets have specific bytecode patterns
-    if (typeof window !== 'undefined' && window.ethereum) {
+    if (window.ethereum) {
       // We'll integrate this with the main app's wallet connection
       // For now, return false - this will be enhanced later
       console.log('🔍 Checking for Safe via WalletConnect...');

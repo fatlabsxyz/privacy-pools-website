@@ -258,7 +258,9 @@ describe('EIP-7702 MetaMask Smart Account', () => {
       (global.window.ethereum.request as jest.Mock).mockResolvedValue(mockStatus);
 
       // Pass an object that should be converted to string
+      const result = await getBatchStatus(mockBatchId);
 
+      expect(result).toEqual(mockStatus);
       expect(global.window.ethereum.request).toHaveBeenCalledWith({
         method: 'wallet_getCallsStatus',
         params: [mockBatchId],
