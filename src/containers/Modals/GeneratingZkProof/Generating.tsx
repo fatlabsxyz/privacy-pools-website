@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, styled, Typography, LinearProgress } from '@mui/material';
 import { BaseModal } from '~/components';
-import { useExit, useModal, usePoolAccountsContext, useWithdraw } from '~/hooks';
+import {
+  // useExit,
+  useModal,
+  usePoolAccountsContext,
+  // useWithdraw
+} from '~/hooks';
 import { EventType, ModalType } from '~/types';
 import { ModalTitle } from '../Deposit';
 import { AnimatedTree } from './AnimatedTree';
@@ -15,8 +20,10 @@ interface ZKProofProgress {
 
 export const GeneratingModal = () => {
   const { setModalOpen, modalOpen } = useModal();
-  const { generateProofAndWithdraw } = useWithdraw();
-  const { generateProofAndExit } = useExit();
+  // const { generateProofAndWithdraw } = useWithdraw();
+  const { generateProofAndWithdraw } = { generateProofAndWithdraw: () => {} };
+  // const { generateProofAndExit } = useExit();
+  const { generateProofAndExit } = { generateProofAndExit: () => {} };
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<ZKProofProgress>({ phase: 'loading_circuits', progress: 0 });
 

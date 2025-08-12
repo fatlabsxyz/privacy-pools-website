@@ -11,10 +11,9 @@ import {
   Typography,
   IconButton,
   useTheme,
-  Avatar,
 } from '@mui/material';
+import { useAccount } from '@starknet-react/core';
 import { formatUnits } from 'viem';
-import { useAccount, useEnsName, useEnsAvatar } from 'wagmi';
 import { useGoTo, useChainContext, useAuthContext } from '~/hooks';
 import { formatDataNumber, getUsdBalance, ROUTER, truncateAddress, zIndex, useClipboard } from '~/utils';
 
@@ -22,15 +21,15 @@ export const Menu = () => {
   const { address } = useAccount();
 
   // ENS hooks for the connected user
-  const { data: ensName } = useEnsName({
-    address: address,
-    chainId: 1, // Always use mainnet for ENS
-  });
+  // const { data: ensName } = useEnsName({
+  //   address: address,
+  //   chainId: 1, // Always use mainnet for ENS
+  // });
 
-  const { data: ensAvatar } = useEnsAvatar({
-    name: ensName || undefined,
-    chainId: 1, // Always use mainnet for ENS
-  });
+  // const { data: ensAvatar } = useEnsAvatar({
+  //   name: ensName || undefined,
+  //   chainId: 1, // Always use mainnet for ENS
+  // });
   const {
     price,
     balanceBN: { value, symbol, decimals },
@@ -100,9 +99,9 @@ export const Menu = () => {
 
         <SMenuItem onClick={handleCopyAddress}>
           <ListItemIcon>
-            {ensAvatar ? <Avatar src={ensAvatar} sx={{ width: 16, height: 16 }} /> : <Wallet size={16} />}
+            <Wallet size={16} />
           </ListItemIcon>
-          {ensName || truncateAddress(address!)}
+          {truncateAddress(address!)}
 
           {copied ? (
             <Checkmark size={16} color={theme.palette.text.disabled} />

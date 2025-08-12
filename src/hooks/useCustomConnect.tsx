@@ -1,4 +1,4 @@
-import { Connector, CreateConnectorFn, useConnect } from 'wagmi';
+import { useConnect, Connector } from '@starknet-react/core';
 import { setUserConnectedCookie } from '~/actions';
 import { getEnv } from '~/config/env';
 import { useNotifications } from './context/useNotificationsContext';
@@ -12,15 +12,15 @@ export const useCustomConnect = () => {
 
   // Filter connectors based on context
   const availableConnectors = TEST_MODE
-    ? connectors.filter((connector) => connector.id === 'mock')
+    ? connectors
     : isSafeApp
       ? [
           ...connectors.filter((connector) => connector.id === 'safe'), // Prefer Safe connector when in Safe
           ...connectors.filter((connector) => connector.id === 'injected'), // Fallback to injected
         ]
-      : connectors.filter((connector) => connector.id !== 'safe'); // Exclude Safe connector when not in Safe App
+      : connectors;
 
-  const customConnect = async (connector: Connector<CreateConnectorFn>) => {
+  const customConnect = async (connector: Connector) => {
     try {
       await connectAsync({ connector });
       setUserConnectedCookie();

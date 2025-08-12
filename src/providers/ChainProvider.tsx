@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { useAccount, useBalance } from '@starknet-react/core';
 import { useQueries } from '@tanstack/react-query';
 import { parseEther } from 'viem';
-import { useAccount, useBalance } from 'wagmi';
 import { ChainData, chainData, ChainAssets, whitelistedChains, PoolInfo, getConfig } from '~/config';
 import { useNotifications } from '~/hooks';
 import { fetchTokenPrice, relayerClient } from '~/utils';
@@ -23,10 +23,10 @@ type SelectedRelayerType = {
 
 type ContextType = {
   chain: ChainData[number];
-  chainId: number;
+  chainId: string;
   balanceBN: { value: bigint; symbol: string; formatted: string; decimals: number };
   balanceInPoolBN: string;
-  setChainId: (value: number) => void;
+  setChainId: (value: string) => void;
   setBalanceInPool: (val: string) => void;
   price: number;
   maxDeposit: string;
@@ -52,7 +52,7 @@ export const ChainContext = createContext({} as ContextType);
 
 export const ChainProvider = ({ children }: Props) => {
   const { address } = useAccount();
-  const [chainId, setChainId] = useState(whitelistedChains[0].id);
+  const [chainId, setChainId] = useState(whitelistedChains[0].id.toString());
   const { addNotification } = useNotifications();
   const [balanceInPoolBN, setBalanceInPool] = useState<string>(parseEther('100').toString());
   const [price, setPrice] = useState<number>(0);
@@ -69,7 +69,7 @@ export const ChainProvider = ({ children }: Props) => {
     setSelectedRelayer(value);
   }, []);
 
-  const handleSetChainId = useCallback((value: number) => {
+  const handleSetChainId = useCallback((value: string) => {
     setChainId(value);
   }, []);
 
@@ -88,7 +88,6 @@ export const ChainProvider = ({ children }: Props) => {
   // User balance based on the selected asset
   const { data: userBalance } = useBalance({
     address,
-    chainId,
     token: selectedAsset === DEFAULT_ASSET ? undefined : selectedPoolInfo.assetAddress,
   });
 

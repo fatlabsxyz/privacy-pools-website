@@ -2,6 +2,7 @@
 
 import { createContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Uint256 } from 'starknet';
 import { Address, createPublicClient, getAddress, Hex, http } from 'viem';
 import { whitelistedChains } from '~/config';
 import { useChainContext } from '~/hooks';
@@ -42,7 +43,7 @@ type ContextType = {
   newSecretKeys: { secret: bigint; nullifier: bigint } | null;
   setNewSecretKeys: (val: { secret: bigint; nullifier: bigint }) => void;
   transactionHash: Hex | undefined;
-  setTransactionHash: (val: Hex) => void;
+  setTransactionHash: (val: TxHash) => void;
   actionType: EventType | undefined;
   setActionType: (val?: EventType) => void;
   feeCommitment: FeeCommitment | null;
@@ -59,6 +60,8 @@ interface Props {
 
 export const PoolAccountsContext = createContext({} as ContextType);
 
+export type TxHash = number | bigint | Uint256;
+
 export const PoolAccountsProvider = ({ children }: Props) => {
   const {
     chainId,
@@ -67,7 +70,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
   } = useChainContext();
 
   const [actionType, setActionType] = useState<EventType>();
-  const [transactionHash, setTransactionHash] = useState<Hex>();
+  const [transactionHash, setTransactionHash] = useState<TxHash>();
 
   const [amount, setAmount] = useState<string>('');
   const [target, setTarget] = useState<Address | ''>('');
@@ -109,7 +112,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
     enabled: !!selectedPoolInfo,
     queryFn: async () => {
       const publicClient = createPublicClient({
-        chain: whitelistedChains.find((chain) => chain.id === chainId),
+        chain: whitelistedChains.find((chain) => chain.id.toString() === chainId),
         transport: http(rpcUrl),
       });
 

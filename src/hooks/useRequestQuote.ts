@@ -13,7 +13,7 @@ interface UseRequestQuoteParams {
   isQuoteLoading: boolean;
   quoteError: Error | null;
 
-  chainId: number | undefined;
+  chainId: string | undefined;
   amountBN: bigint;
   assetAddress: Address | undefined;
   recipient: Address | '';

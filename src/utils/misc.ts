@@ -1,5 +1,5 @@
+import { Connector } from '@starknet-react/core';
 import { formatUnits, parseUnits, PublicClient } from 'viem';
-import { CreateConnectorFn, Connector } from 'wagmi';
 import { EventType, ReviewStatus, StatusObject } from '~/types';
 
 export const getUsdBalance = (price: number | null, balance: string, decimals: number): string => {
@@ -87,7 +87,7 @@ export const getTimestampFromBlockNumber = async (blockNumber: bigint, publicCli
   return block.timestamp;
 };
 
-export const getUniqueConnectors = (connectors: readonly Connector<CreateConnectorFn>[]) => {
+export const getUniqueConnectors = (connectors: readonly Connector[]) => {
   const seen = new Set<string>();
   return connectors.filter((connector) => {
     const name = (connector as { rkDetails?: { name?: string } })?.rkDetails?.name || connector.name;

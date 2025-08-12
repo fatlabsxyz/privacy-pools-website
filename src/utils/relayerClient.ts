@@ -1,13 +1,13 @@
 import { FeesResponse, RelayRequestBody, RelayerResponse, QuoteRequestBody, QuoteResponse } from '~/types';
 
 interface FetchClient {
-  fetchFees: (relayerUrl: string, chainId: number, assetAddress: string) => Promise<FeesResponse>;
+  fetchFees: (relayerUrl: string, chainId: string, assetAddress: string) => Promise<FeesResponse>;
   relay: (relayerUrl: string, input: RelayRequestBody) => Promise<RelayerResponse>;
   fetchQuote: (relayerUrl: string, input: QuoteRequestBody) => Promise<QuoteResponse>;
 }
 
 const fetchClient: FetchClient = {
-  fetchFees: async (relayerUrl: string, chainId: number, assetAddress: string) => {
+  fetchFees: async (relayerUrl: string, chainId: string, assetAddress: string) => {
     const response = await fetch(`${relayerUrl}/relayer/details?chainId=${chainId}&assetAddress=${assetAddress}`);
     const data = await response.json();
     return data;

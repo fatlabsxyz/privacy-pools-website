@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Stack } from '@mui/material';
-import { useAccount } from 'wagmi';
+import { useAccount } from '@starknet-react/core';
 import { useAccountContext, useModal, usePoolAccountsContext, useChainContext } from '~/hooks';
 import { EventType, ModalType } from '~/types';
 

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Stack, Button, styled, alpha } from '@mui/material';
-import { Connector, CreateConnectorFn } from 'wagmi';
+import { Connector } from '@starknet-react/core';
 import { BaseModal } from '~/components';
 import { useCustomConnect, useGoTo, useModal } from '~/hooks';
 import { ModalType } from '~/types';
@@ -16,7 +16,7 @@ export const ConnectModal = () => {
 
   const uniqueConnectors = useMemo(() => getUniqueConnectors(availableConnectors), [availableConnectors]);
 
-  const handleConnect = async (connector: Connector<CreateConnectorFn>) => {
+  const handleConnect = async (connector: Connector) => {
     await customConnect(connector);
     goTo(ROUTER.account.base);
     closeModal();
@@ -48,7 +48,7 @@ export const ConnectModal = () => {
 
           {uniqueConnectors.map((connector) => (
             <SButton
-              key={connector.uid}
+              key={connector.id}
               fullWidth
               onClick={() => handleConnect(connector)}
               data-testid={`wallet-option-${connector.id}`}

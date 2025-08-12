@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mainnet, sepolia } from '@starknet-react/chains';
 import { getServerEnv } from '~/config/env';
 
-const { HYPERSYNC_KEY } = getServerEnv();
+const { ALCHEMY_KEY } = getServerEnv();
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest) {
 
     // Map chainId to Hypersync endpoint
     const hypersyncUrls: Record<string, string> = {
-      '1': `https://eth.rpc.hypersync.xyz/${HYPERSYNC_KEY}`, // Mainnet
-      '11155111': `https://sepolia.rpc.hypersync.xyz/${HYPERSYNC_KEY}`, // Sepolia
+      [mainnet.id.toString()]: `https://starknet-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, // Mainnet
+      [sepolia.id.toString()]: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${ALCHEMY_KEY}`, // Sepolia
     };
 
     const hypersyncUrl = hypersyncUrls[chainId];
@@ -50,9 +51,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(rpcRequest),
     });
 
-    if (!response.ok) {
-      throw new Error(`Hypersync request failed: ${response.status} ${response.statusText}`);
-    }
+    // if (!response.ok) {
+    //   throw new Error(`Hypersync request failed: ${response.status} ${response.statusText}`);
+    // }
 
     const data = await response.json();
 

@@ -3,7 +3,6 @@
 import {
   Circuits,
   CommitmentProof,
-  PrivacyPoolSDK,
   WithdrawalProofInput,
   calculateContext,
   Withdrawal,
@@ -12,12 +11,14 @@ import {
   Hash,
   WithdrawalProof,
   AccountService,
-  DataService,
   PrivacyPoolAccount,
   AccountCommitment,
-  ChainConfig,
+  // ChainConfig,
   PoolInfo,
-} from '@0xbow/privacy-pools-core-sdk';
+  StarknetDataService,
+  PrivacyPoolStarknetSDK,
+} from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { RpcProvider } from 'starknet';
 import { createPublicClient, Hex } from 'viem';
 import { ChainData, chainData, whitelistedChains } from '~/config';
 import { transports } from '~/config/wagmiConfig';
@@ -25,7 +26,7 @@ import { PoolAccount, ReviewStatus } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
 
 const chainDataByWhitelistedChains = Object.values(chainData).filter(
-  (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id === chain.poolInfo[0].chainId),
+  (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id.toString() === chain.poolInfo[0].chainId),
 );
 
 const poolsByChain = chainDataByWhitelistedChains.flatMap(
@@ -34,7 +35,7 @@ const poolsByChain = chainDataByWhitelistedChains.flatMap(
 
 // Lazy load circuits only when needed
 let circuits: Circuits | null = null;
-let sdk: PrivacyPoolSDK | null = null;
+let sdk: PrivacyPoolStarknetSDK | null = null;
 
 const initializeSDK = () => {
   if (!circuits) {
@@ -44,30 +45,36 @@ const initializeSDK = () => {
       throw new Error('SDK can only be initialized on client-side');
     }
     circuits = new Circuits({ baseUrl: currentBaseUrl });
-    sdk = new PrivacyPoolSDK(circuits);
+    sdk = new PrivacyPoolStarknetSDK(circuits);
   }
   return sdk!;
 };
 
 const pools: PoolInfo[] = poolsByChain.map((pool) => {
   return {
-    chainId: pool.chainId,
+    chainId: pool.chainId as never,
     address: pool.address,
     scope: pool.scope as Hash,
-    deploymentBlock: pool.deploymentBlock,
+    deploymentBlock: 0n,
   };
 });
 
-const dataServiceConfig: ChainConfig[] = poolsByChain.map((pool) => {
-  return {
-    chainId: pool.chainId,
-    privacyPoolAddress: pool.address,
-    startBlock: pool.deploymentBlock,
-    rpcUrl: chainData[pool.chainId].sdkRpcUrl,
-    apiKey: 'sdk', // It's not an api key https://viem.sh/docs/clients/public#key-optional
-  };
-});
-const dataService = new DataService(dataServiceConfig);
+// const dataServiceConfig: ChainConfig[] = poolsByChain.map((pool) => {
+//   return {
+//     chainId: pool.chainId as never,
+//     privacyPoolAddress: pool.address,
+//     startBlock: pool.deploymentBlock,
+//     rpcUrl: chainData[pool.chainId].sdkRpcUrl,
+//     apiKey: 'sdk', // It's not an api key https://viem.sh/docs/clients/public#key-optional
+//   };
+// });
+const chain = chainDataByWhitelistedChains[0];
+
+const dataService = new StarknetDataService(
+  new RpcProvider({
+    nodeUrl: chain.rpcUrl,
+  }),
+);
 
 /**
  * Generates a zero-knowledge proof for a commitment using Poseidon hash.
@@ -140,13 +147,13 @@ export const verifyWithdrawalProof = async (proof: WithdrawalProof) => {
 };
 
 export const createAccount = (seed: string) => {
-  const accountService = new AccountService(dataService, { mnemonic: seed });
+  const accountService = new AccountService(dataService as never, { mnemonic: seed });
 
   return accountService;
 };
 
 export const loadAccount = async (seed: string) => {
-  const accountService = new AccountService(dataService, { mnemonic: seed });
+  const accountService = new AccountService(dataService as never, { mnemonic: seed });
   await accountService.retrieveHistory(pools);
   return accountService;
 };
@@ -222,7 +229,7 @@ export const addRagequit = async (
   return accountService.addRagequitToAccount(ragequitParams.label, ragequitParams.ragequit);
 };
 
-export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, chainId: number) => {
+export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, chainId: string) => {
   const paMap = account.poolAccounts.entries();
   const poolAccounts = [];
 
@@ -249,7 +256,7 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
       };
 
       const publicClient = createPublicClient({
-        chain: whitelistedChains.find((chain) => chain.id === Number(_chainId))!,
+        chain: whitelistedChains.find((chain) => chain.id.toString() === _chainId)! as never,
         transport: transports[Number(_chainId)],
       });
 

@@ -16,8 +16,8 @@ import {
   Typography,
   Box,
 } from '@mui/material';
+import { useAccount } from '@starknet-react/core';
 import { formatUnits } from 'viem';
-import { useAccount } from 'wagmi';
 import { DottedMenu, ExtendedTooltip as Tooltip, StatusChip } from '~/components';
 import { getConstants } from '~/config/constants';
 import { usePoolAccountsContext, useModal, useChainContext, useAccountContext } from '~/hooks';

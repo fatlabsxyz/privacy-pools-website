@@ -67,7 +67,7 @@ export interface RelayerResponse {
  */
 export type QuoteRequestBody = {
   /** The chain ID for the withdrawal. */
-  chainId: number;
+  chainId: string;
   /** The withdrawal amount as a string representation of a BigInt (in wei or base units). */
   amount: string;
   /** The address of the asset being withdrawn. */

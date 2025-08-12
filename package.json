@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:debug": "NODE_OPTIONS='--inspect' next dev",
     "build": "pnpm run lint:fix && next build",
     "start": "next start",
     "preview": "next start",
@@ -35,6 +36,7 @@
     "@emotion/react": "11.14.0",
     "@emotion/server": "11.11.0",
     "@emotion/styled": "11.14.0",
+    "@fatsolutions/privacy-pools-core-starknet-sdk": "link:../privacy-pools-starknet/packages/sdk",
     "@fontsource/ibm-plex-mono": "5.1.0",
     "@mui/icons-material": "6.1.6",
     "@mui/material": "6.1.6",
@@ -43,12 +45,16 @@
     "@safe-global/safe-apps-react-sdk": "^4.7.2",
     "@safe-global/safe-apps-sdk": "^9.1.0",
     "@sentry/nextjs": "9.25.1",
+    "@starknet-react/chains": "^4.0.3",
+    "@starknet-react/core": "^4.0.3",
     "@tanstack/react-query": "5.56.2",
     "@vercel/analytics": "1.5.0",
+    "get-starknet-core": "^3.3.5",
     "next": "15.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-router-dom": "6.26.2",
+    "starknet": "^7.6.4",
     "viem": "2.23.5",
     "wagmi": "2.14.12"
   },
@@ -96,6 +102,17 @@
       "@types/react-dom": "19.0.2",
       "@babel/runtime@<7.26.10": ">=7.26.10",
       "@babel/helpers@<7.26.10": ">=7.26.10"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@carbon/icon-helpers",
+      "@carbon/icons-react",
+      "@sentry/cli",
+      "bufferutil",
+      "cypress",
+      "esbuild",
+      "keccak",
+      "sharp",
+      "utf-8-validate"
+    ]
   }
 }
