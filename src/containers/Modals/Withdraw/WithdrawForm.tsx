@@ -12,12 +12,12 @@ import {
   Stack,
   styled,
   TextField,
-  Avatar,
   Tooltip,
   useTheme,
 } from '@mui/material';
-import { Address, formatUnits, isAddress, parseUnits } from 'viem';
-import { useEnsAddress, useEnsAvatar, useEnsName } from 'wagmi';
+import { useStarkAddress, useStarkName } from '@starknet-react/core';
+import { validateAndParseAddress } from 'starknet';
+import { Address, formatUnits, parseUnits } from 'viem';
 import { CoinIcon, ImageContainer, InputContainer, ModalContainer, ModalTitle } from '~/containers/Modals/Deposit';
 import { useChainContext, useAccountContext, useModal, usePoolAccountsContext, useNotifications } from '~/hooks';
 import { ModalType } from '~/types';
@@ -26,6 +26,16 @@ import { LinksSection } from '../LinksSection';
 import { AmountInputSection } from './AmountInputSection';
 import { PoolAccountSelectorSection } from './PoolAccountSelectorSection';
 import { RelayerSelectorSection } from './RelayerSelectorSection';
+
+const validateAddress = (address: string): Address | null => {
+  try {
+    return validateAndParseAddress(address) as Address;
+  } catch {
+    return null;
+  }
+};
+
+const isAddress = validateAddress;
 
 const minWithdrawCache = new Map<string, string>();
 
@@ -116,19 +126,12 @@ export const WithdrawForm = () => {
     data: ensAddress,
     isLoading: isLoadingEnsAddress,
     error: ensError,
-  } = useEnsAddress({
+  } = useStarkAddress({
     name: normalizedName,
-    chainId: 1, // Always use mainnet for ENS
   });
 
-  const { data: ensAvatar } = useEnsAvatar({
-    name: normalizedName,
-    chainId: 1, // Always use mainnet for ENS
-  });
-
-  const { data: reverseEnsName } = useEnsName({
-    address: isAddress(target) ? target : undefined,
-    chainId: 1, // Always use mainnet for ENS
+  const { data: reverseEnsName } = useStarkName({
+    address: isAddress(target) ? (target as Address) : undefined,
   });
 
   // Effect to handle ENS resolution
@@ -229,8 +232,13 @@ export const WithdrawForm = () => {
   }, [target, targetAddressHasError]);
 
   const isFormValid = useMemo(() => {
-    return isValidAmount && isRecipientAddressValid && !!selectedRelayer?.url && !!selectedPoolInfo?.assetAddress;
-  }, [isValidAmount, isRecipientAddressValid, selectedRelayer, selectedPoolInfo?.assetAddress]);
+    return (
+      isValidAmount &&
+      isRecipientAddressValid &&
+      // !!selectedRelayer?.url &&
+      !!selectedPoolInfo?.assetAddress
+    );
+  }, [isValidAmount, isRecipientAddressValid, selectedPoolInfo?.assetAddress]);
 
   // Quote handling moved to Review screen
 
@@ -303,8 +311,9 @@ export const WithdrawForm = () => {
     setTargetAddressHasError(false);
 
     // If it's a valid address, set it directly
-    if (isAddress(value)) {
-      setTarget(value as Address);
+    const parsedAddress = validateAddress(value);
+    if (parsedAddress) {
+      setTarget(parsedAddress as Address);
       setEnsName(null);
     } else {
       // Check if it looks like a complete ENS name (dot + 3+ chars)
@@ -433,7 +442,7 @@ export const WithdrawForm = () => {
               data-testid='target-address-input'
               fullWidth
               InputProps={{
-                startAdornment: ensAvatar ? <Avatar src={ensAvatar} sx={{ width: 24, height: 24, mr: 1 }} /> : null,
+                startAdornment: null,
                 endAdornment: isLoadingEnsAddress ? <CircularProgress size={20} /> : null,
               }}
             />

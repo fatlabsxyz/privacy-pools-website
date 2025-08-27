@@ -1,4 +1,4 @@
-import { Chain, mainnet, sepolia, Address } from '@starknet-react/chains';
+import { Chain, mainnet, sepolia, Address, devnet } from '@starknet-react/chains';
 import { parseEther, parseUnits } from 'viem';
 import { getEnv } from '~/config/env';
 import daiIcon from '~/assets/icons/dai.svg';
@@ -14,7 +14,10 @@ const { ALCHEMY_KEY, IS_TESTNET, ASP_ENDPOINT } = getEnv();
 
 // Add chains to the whitelist to be used in the app
 const mainnetChains: readonly [Chain, ...Chain[]] = [mainnet];
-const testnetChains: readonly [Chain, ...Chain[]] = [sepolia];
+const testnetChains: readonly [Chain, ...Chain[]] = [
+  // sepolia,
+  devnet,
+];
 
 export const whitelistedChains = IS_TESTNET ? testnetChains : mainnetChains;
 
@@ -176,14 +179,80 @@ const mainnetChainData: ChainData = {
 
 const testnetChainData: ChainData = {
   // Testnets
-  [sepolia.id.toString()]: {
-    name: sepolia.name,
-    symbol: sepolia.nativeCurrency.symbol,
-    decimals: sepolia.nativeCurrency.decimals,
+  // [sepolia.id.toString()]: {
+  //   name: sepolia.name,
+  //   symbol: sepolia.nativeCurrency.symbol,
+  //   decimals: sepolia.nativeCurrency.decimals,
+  //   image: mainnetIcon.src,
+  //   explorerUrl: sepolia.explorers.voyager.at(0)!,
+  //   sdkRpcUrl: `/api/hypersync-rpc?chainId=${sepolia.id.toString()}`, // Secure Hypersync proxy (relative URL)
+  //   rpcUrl: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${ALCHEMY_KEY}` as const,
+  //   aspUrl: ASP_ENDPOINT,
+  //   relayers: [
+  //     { name: 'Testnet Relay', url: 'https://testnet-relayer.privacypools.com' },
+  //     { name: 'Freedom Relay', url: 'https://fastrelay.xyz' },
+  //   ],
+  //   poolInfo: [
+  //     {
+  //       chainId: sepolia.id.toString(),
+  //       asset: 'ETH' as const,
+  //       assetAddress: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7' as const,
+  //       assetDecimals: 18,
+  //       address: '0x597dbf977e6939840eafceaf1016281246c8bd49d068bde3b44b074df4f646b' as const,
+  //       scope: 0x5448b936fbc76a4d45a638d23b884cf31f2b1bede31e9fce22952c2424fc70n as const,
+  //       entryPointAddress: '0x789930ae23678435d62ff7994da2c7c02c18e364d1529e1ec352a2b481c4f4a' as const,
+  //       maxDeposit: parseEther('1'),
+  //       deploymentBlock: 1446670n,
+  //     },
+  //   ],
+  //   // poolInfo: [
+  //   //   {
+  //   //     chainId: sepolia.id,
+  //   //     assetAddress: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+  //   //     address: '0x644d5A2554d36e27509254F32ccfeBe8cd58861f',
+  //   //     scope: 13541713702858359530363969798588891965037210808099002426745892519913535247342n,
+  //   //     deploymentBlock: 8587019n,
+  //   //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
+  //   //     maxDeposit: parseEther('1'),
+  //   //     asset: 'ETH',
+  //   //     assetDecimals: 18,
+  //   //     icon: mainnetIcon.src,
+  //   //     isStableAsset: false,
+  //   //   },
+  //   //   {
+  //   //     chainId: sepolia.id,
+  //   //     assetAddress: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
+  //   //     address: '0x6709277E170DEe3E54101cDb73a450E392ADfF54',
+  //   //     scope: 9423591183392302543658559874370404687995075471172962430042059179876435583731n,
+  //   //     deploymentBlock: 8587019n,
+  //   //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
+  //   //     maxDeposit: parseUnits('100', 6),
+  //   //     asset: 'USDT',
+  //   //     assetDecimals: 6,
+  //   //     isStableAsset: true,
+  //   //   },
+  //   //   {
+  //   //     chainId: sepolia.id,
+  //   //     assetAddress: '0x1c7d4b196cb0c7b01d743fbc6116a902379c7238',
+  //   //     address: '0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f',
+  //   //     scope: 18021368285297593722986850677939473668942851500120722179451099768921996600282n,
+  //   //     deploymentBlock: 8587019n,
+  //   //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
+  //   //     maxDeposit: parseUnits('100', 6),
+  //   //     asset: 'USDC',
+  //   //     assetDecimals: 6,
+  //   //     isStableAsset: true,
+  //   //   },
+  //   // ],
+  // },
+  [devnet.id.toString()]: {
+    name: devnet.name,
+    symbol: devnet.nativeCurrency.symbol,
+    decimals: devnet.nativeCurrency.decimals,
     image: mainnetIcon.src,
-    explorerUrl: sepolia.explorers.voyager.at(0)!,
-    sdkRpcUrl: `/api/hypersync-rpc?chainId=${sepolia.id.toString()}`, // Secure Hypersync proxy (relative URL)
-    rpcUrl: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${ALCHEMY_KEY}` as const,
+    explorerUrl: '',
+    sdkRpcUrl: `/api/hypersync-rpc?chainId=${devnet.id.toString()}`, // Secure Hypersync proxy (relative URL)
+    rpcUrl: `http://localhost:5050/rpc` as const,
     aspUrl: ASP_ENDPOINT,
     relayers: [
       { name: 'Testnet Relay', url: 'https://testnet-relayer.privacypools.com' },
@@ -191,56 +260,17 @@ const testnetChainData: ChainData = {
     ],
     poolInfo: [
       {
-        chainId: sepolia.id.toString(),
+        chainId: devnet.id.toString(),
         asset: 'ETH' as const,
-        assetAddress: '0x360d0b4f6c19fc4031286d0fcd3500c810a2471efb89cb7e125b719f63fa2f4' as const,
+        assetAddress: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7' as const,
         assetDecimals: 18,
-        address: '0x0597dbf977e6939840eafceaf1016281246c8bd49d068bde3b44b074df4f646b' as const,
-        scope: 0x360d0b4f6c19fc4031286d0fcd3500c810a2471efb89cb7e125b719f63fa2f4n as const,
-        entryPointAddress: '0x53f3877965df69f49915fd1b8047f451b86d03d3a3a41e2287a38b2884770f' as const,
-        maxDeposit: parseEther('1'),
+        address: '0x5f31bfa4bda4cac510ce3235b58f5595b6097e59f2bd554ff3bc19d779a90f' as const,
+        scope: 0x5448b936fbc76a4d45a638d23b884cf31f2b1bede31e9fce22952c2424fc70n as const,
+        entryPointAddress: '0x248be73ad9087517e4624c29ce4ac84a76c8b4791205baa6856970e32ef6794' as const,
+        maxDeposit: parseEther('10'),
         deploymentBlock: 1446670n,
       },
     ],
-    // poolInfo: [
-    //   {
-    //     chainId: sepolia.id,
-    //     assetAddress: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    //     address: '0x644d5A2554d36e27509254F32ccfeBe8cd58861f',
-    //     scope: 13541713702858359530363969798588891965037210808099002426745892519913535247342n,
-    //     deploymentBlock: 8587019n,
-    //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
-    //     maxDeposit: parseEther('1'),
-    //     asset: 'ETH',
-    //     assetDecimals: 18,
-    //     icon: mainnetIcon.src,
-    //     isStableAsset: false,
-    //   },
-    //   {
-    //     chainId: sepolia.id,
-    //     assetAddress: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
-    //     address: '0x6709277E170DEe3E54101cDb73a450E392ADfF54',
-    //     scope: 9423591183392302543658559874370404687995075471172962430042059179876435583731n,
-    //     deploymentBlock: 8587019n,
-    //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
-    //     maxDeposit: parseUnits('100', 6),
-    //     asset: 'USDT',
-    //     assetDecimals: 6,
-    //     isStableAsset: true,
-    //   },
-    //   {
-    //     chainId: sepolia.id,
-    //     assetAddress: '0x1c7d4b196cb0c7b01d743fbc6116a902379c7238',
-    //     address: '0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f',
-    //     scope: 18021368285297593722986850677939473668942851500120722179451099768921996600282n,
-    //     deploymentBlock: 8587019n,
-    //     entryPointAddress: '0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB',
-    //     maxDeposit: parseUnits('100', 6),
-    //     asset: 'USDC',
-    //     assetDecimals: 6,
-    //     isStableAsset: true,
-    //   },
-    // ],
   },
 };
 

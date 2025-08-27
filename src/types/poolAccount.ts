@@ -13,7 +13,7 @@ export type PoolAccount = SDKPoolAccount & {
   isValid: boolean; // included in ASP leaves
   reviewStatus: ReviewStatus; // ASP status
   lastCommitment: AccountCommitment;
-  chainId: number;
+  chainId: string;
   scope: Hash;
   ragequit?: RagequitEventWithTimestamp;
 };

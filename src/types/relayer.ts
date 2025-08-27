@@ -3,9 +3,9 @@
  */
 export interface WithdrawalRelayerPayload {
   /** Relayer address (0xAdDrEsS) */
-  processooor: string;
+  processor: string;
   /** Transaction data (hex encoded) */
-  data: string;
+  data: bigint[];
 }
 
 /**

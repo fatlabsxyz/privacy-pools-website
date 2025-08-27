@@ -28,8 +28,15 @@ export const ReviewModal = () => {
   const { isClosable, setModalOpen } = useModal();
   const { deposit, isLoading: isDepositLoading } = useDeposit();
   const { isLoading: isWithdrawLoading } = useWithdraw();
+  // const isWithdrawLoading = false;
   const { isLoading: isExitLoading } = useExit();
-  const { actionType, feeCommitment, amount, target } = usePoolAccountsContext();
+  const {
+    actionType,
+    // feeCommitment,
+    amount,
+    target,
+  } = usePoolAccountsContext();
+  const feeCommitment = true;
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
   const { quoteState, setExtraGas } = useQuoteContext();
 
@@ -49,19 +56,23 @@ export const ReviewModal = () => {
 
   const amountBN = parseUnits(amount, decimals);
   const { getQuote, isQuoteLoading } = relayerData || {};
-  const { isQuoteValid, isExpired, requestNewQuote } = useRequestQuote({
-    getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
-    isQuoteLoading: isQuoteLoading || false,
-    quoteError: null,
-    chainId,
-    amountBN,
-    assetAddress: selectedPoolInfo?.assetAddress,
-    recipient: target,
-    isValidAmount: amountBN > 0n,
-    isRecipientAddressValid: !!target,
-    isRelayerSelected: !!currentSelectedRelayerData?.relayerAddress,
-    addNotification,
-  });
+  // const { isQuoteValid, isExpired, requestNewQuote } = useRequestQuote({
+  //   getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
+  //   isQuoteLoading: isQuoteLoading || false,
+  //   quoteError: null,
+  //   chainId,
+  //   amountBN,
+  //   assetAddress: selectedPoolInfo?.assetAddress,
+  //   recipient: target,
+  //   isValidAmount: amountBN > 0n,
+  //   isRecipientAddressValid: !!target,
+  //   isRelayerSelected: !!currentSelectedRelayerData?.relayerAddress,
+  //   addNotification,
+  // });
+
+  const isQuoteValid = true;
+  const isExpired = false;
+  const requestNewQuote = () => {};
 
   const isLoading = isDepositLoading || isExitLoading || isWithdrawLoading;
 

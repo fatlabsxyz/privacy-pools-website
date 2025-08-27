@@ -1,4 +1,5 @@
 import { Connector } from '@starknet-react/core';
+import { BatchClient, RpcProvider } from 'starknet';
 import { formatUnits, parseUnits, PublicClient } from 'viem';
 import { EventType, ReviewStatus, StatusObject } from '~/types';
 
@@ -75,16 +76,14 @@ export const formatSmallNumber = (value: number, currency?: boolean, significant
   return currency ? `$${trimmedResult}` : trimmedResult;
 };
 
-export const getTimestampFromBlockNumber = async (blockNumber: bigint, publicClient: PublicClient) => {
-  if (!publicClient) throw new Error('Public client not found');
+export const getTimestampFromBlockNumber = async (blockNumber: bigint, provider: RpcProvider) => {
+  if (!provider) throw new Error('Public client not found');
 
-  const block = await publicClient.getBlock({
-    blockNumber,
-  });
+  const block = await provider.getBlock(blockNumber.toString());
 
   if (!block) throw new Error('Block required to get timestamp');
 
-  return block.timestamp;
+  return BigInt(block.timestamp);
 };
 
 export const getUniqueConnectors = (connectors: readonly Connector[]) => {

@@ -13,7 +13,7 @@ import {
   useRequestQuote,
   useNotifications,
 } from '~/hooks';
-import { EventType } from '~/types';
+import { EventType, QuoteRequestBody, QuoteResponse } from '~/types';
 import { getUsdBalance, truncateAddress } from '~/utils';
 import { FeeBreakdown, formatFeeDisplay } from './FeeBreakdown';
 
@@ -54,6 +54,31 @@ export const DataSection = () => {
   // Add quote timer for withdrawals
   const amountBN = parseUnits(amount, decimals);
   const { getQuote, isQuoteLoading, quoteError } = relayerData || {};
+  // const { getQuote, isQuoteLoading, quoteError } = {
+  //   getQuote: async (_: QuoteRequestBody) => {
+  //     return {
+  //       baseFeeBPS: '1',
+  //       feeBPS: '1',
+  //       gasPrice: '1',
+  //       feeCommitment: {
+  //         expiration: Date.now() + 3600 * 1000,
+  //         withdrawalData: '',
+  //         signedRelayerCommitment: '',
+  //         extraGas: undefined,
+  //       },
+  //       detail: {
+  //         relayTxCost: {
+  //           gas: '1',
+  //           eth: '0.000lol',
+  //         },
+  //         extraGasFundAmount: undefined,
+  //         extraGasTxCost: undefined,
+  //       },
+  //     } satisfies QuoteResponse;
+  //   },
+  //   isQuoteLoading: false,
+  //   quoteError: null,
+  // };
   const {
     countdown,
     isQuoteValid,

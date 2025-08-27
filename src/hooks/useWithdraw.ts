@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { addBreadcrumb, captureException, withScope } from '@sentry/nextjs';
-import { getAddress, Hex, parseUnits, TransactionExecutionError } from 'viem';
-import { generatePrivateKey } from 'viem/accounts';
-import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi';
+import { generateMerkleProof, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { addBreadcrumb } from '@sentry/nextjs';
+import { useAccount, useSendTransaction } from '@starknet-react/core';
+import { parseUnits } from 'viem';
 import { getConfig } from '~/config';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -12,25 +12,23 @@ import {
   useNotifications,
   usePoolAccountsContext,
   useChainContext,
-  useSafeApp,
 } from '~/hooks';
-import { Hash, ModalType, Secret, ProofRelayerPayload, WithdrawalRelayerPayload } from '~/types';
+import { Hash, ModalType, Secret } from '~/types';
+import { WorkerMessages } from '~/types/worker-commands.interface';
 import {
   prepareWithdrawRequest,
   getContext,
   getMerkleProof,
-  generateWithdrawalProof,
-  decodeEventsFromReceipt,
-  withdrawEventAbi,
   verifyWithdrawalProof,
   prepareWithdrawalProofInput,
-  getScope,
   createWithdrawalSecrets,
+  snRpcProvider,
+  waitForEvents,
+  relay,
+  getScope,
+  getDeposits,
 } from '~/utils';
 
-const {
-  env: { TEST_MODE },
-} = getConfig();
 
 const PRIVACY_POOL_ERRORS = {
   'Error: InvalidProof()': 'Failed to verify withdrawal proof. Please regenerate your proof and try again.',
@@ -52,24 +50,25 @@ const PRIVACY_POOL_ERRORS = {
 } as const;
 
 export const useWithdraw = () => {
+  const { address } = useAccount();
+  const { sendAsync } = useSendTransaction({});
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const { setModalOpen, setIsClosable } = useModal();
-  const { aspData, relayerData } = useExternalServices();
-  const { switchChainAsync } = useSwitchChain();
-  const { data: walletClient } = useWalletClient();
+  const {
+    aspData,
+    // relayerData
+  } = useExternalServices();
   const { resetQuote } = useQuoteContext();
-  const { isSafeApp } = useSafeApp();
   const {
     selectedPoolInfo,
-    chainId,
+    // chainId,
     balanceBN: { decimals },
     relayersData,
     selectedRelayer,
   } = useChainContext();
 
   const { accountService, addWithdrawal } = useAccountContext();
-  const publicClient = usePublicClient({ chainId });
 
   const {
     amount,
@@ -89,85 +88,85 @@ export const useWithdraw = () => {
   const commitment = poolAccount?.lastCommitment;
   const aspLeaves = aspData.mtLeavesData?.aspLeaves;
   const stateLeaves = aspData.mtLeavesData?.stateTreeLeaves;
-  const { address } = useAccount();
+  // const { address } = useAccount();
 
-  const logErrorToSentry = useCallback(
-    (error: Error | unknown, context: Record<string, unknown>) => {
-      // Filter out expected user behavior errors
-      if (error && typeof error === 'object') {
-        const message = (error as { message?: string }).message || '';
-        const errorName = (error as { name?: string }).name || '';
-        const errorCode = (error as { code?: number }).code;
+  // const logErrorToSentry = useCallback(
+  //   (error: Error | unknown, context: Record<string, unknown>) => {
+  //     // Filter out expected user behavior errors
+  //     if (error && typeof error === 'object') {
+  //       const message = (error as { message?: string }).message || '';
+  //       const errorName = (error as { name?: string }).name || '';
+  //       const errorCode = (error as { code?: number }).code;
 
-        // Don't log wallet rejections and user behavior errors
-        if (
-          errorCode === 4001 ||
-          errorCode === 4100 ||
-          errorCode === 4200 ||
-          errorCode === -32002 ||
-          errorCode === -32003 ||
-          message.includes('User rejected the request') ||
-          message.includes('User denied') ||
-          message.includes('User cancelled') ||
-          message.includes('Pop up window failed to open') ||
-          message.includes('provider is not defined') ||
-          message.includes('No Ethereum provider found') ||
-          message.includes('Connection timeout') ||
-          message.includes('Request timeout') ||
-          message.includes('Transaction cancelled') ||
-          message.includes('Chain switching failed') ||
-          errorName === 'UserRejectedRequestError'
-        ) {
-          console.warn('Filtered wallet user behavior error (not logging to Sentry)');
-          return;
-        }
-      }
+  //       // Don't log wallet rejections and user behavior errors
+  //       if (
+  //         errorCode === 4001 ||
+  //         errorCode === 4100 ||
+  //         errorCode === 4200 ||
+  //         errorCode === -32002 ||
+  //         errorCode === -32003 ||
+  //         message.includes('User rejected the request') ||
+  //         message.includes('User denied') ||
+  //         message.includes('User cancelled') ||
+  //         message.includes('Pop up window failed to open') ||
+  //         message.includes('provider is not defined') ||
+  //         message.includes('No Ethereum provider found') ||
+  //         message.includes('Connection timeout') ||
+  //         message.includes('Request timeout') ||
+  //         message.includes('Transaction cancelled') ||
+  //         message.includes('Chain switching failed') ||
+  //         errorName === 'UserRejectedRequestError'
+  //       ) {
+  //         console.warn('Filtered wallet user behavior error (not logging to Sentry)');
+  //         return;
+  //       }
+  //     }
 
-      withScope((scope) => {
-        scope.setUser({
-          address: address,
-        });
+  //     withScope((scope) => {
+  //       scope.setUser({
+  //         address: address,
+  //       });
 
-        // Set additional context
-        scope.setContext('withdrawal_context', {
-          chainId,
-          poolAddress: selectedPoolInfo?.address,
-          entryPointAddress: selectedPoolInfo?.entryPointAddress,
-          amount: amount?.toString(),
-          target,
-          hasPoolAccount: !!poolAccount,
-          hasCommitment: !!commitment,
-          hasAspLeaves: !!aspLeaves,
-          hasStateLeaves: !!stateLeaves,
-          hasSelectedRelayer: !!selectedRelayer?.url,
-          selectedRelayer,
-          testMode: TEST_MODE,
-          ...context,
-        });
+  //       // Set additional context
+  //       scope.setContext('withdrawal_context', {
+  //         chainId,
+  //         poolAddress: selectedPoolInfo?.address,
+  //         entryPointAddress: selectedPoolInfo?.entryPointAddress,
+  //         amount: amount?.toString(),
+  //         target,
+  //         hasPoolAccount: !!poolAccount,
+  //         hasCommitment: !!commitment,
+  //         hasAspLeaves: !!aspLeaves,
+  //         hasStateLeaves: !!stateLeaves,
+  //         hasSelectedRelayer: !!selectedRelayer?.url,
+  //         selectedRelayer,
+  //         testMode: TEST_MODE,
+  //         ...context,
+  //       });
 
-        // Set tags for filtering
-        scope.setTag('operation', 'withdraw');
-        scope.setTag('chain_id', chainId?.toString());
-        scope.setTag('test_mode', TEST_MODE.toString());
+  //       // Set tags for filtering
+  //       scope.setTag('operation', 'withdraw');
+  //       scope.setTag('chain_id', chainId?.toString());
+  //       scope.setTag('test_mode', TEST_MODE.toString());
 
-        // Log the error
-        captureException(error);
-      });
-    },
-    [
-      address,
-      chainId,
-      selectedPoolInfo?.address,
-      selectedPoolInfo?.entryPointAddress,
-      selectedRelayer,
-      amount,
-      target,
-      poolAccount,
-      commitment,
-      aspLeaves,
-      stateLeaves,
-    ],
-  );
+  //       // Log the error
+  //       captureException(error);
+  //     });
+  //   },
+  //   [
+  //     address,
+  //     chainId,
+  //     selectedPoolInfo?.address,
+  //     selectedPoolInfo?.entryPointAddress,
+  //     selectedRelayer,
+  //     amount,
+  //     target,
+  //     poolAccount,
+  //     commitment,
+  //     aspLeaves,
+  //     stateLeaves,
+  //   ],
+  // );
 
   const getPrivacyPoolErrorMessage = useCallback((errorMessage: string): string | null => {
     // Check for exact matches first
@@ -195,14 +194,21 @@ export const useWithdraw = () => {
         phase: 'loading_circuits' | 'generating_proof' | 'verifying_proof';
         progress: number;
       }) => void,
-      onComplete?: (proof: unknown, withdrawal: unknown, newSecretKeys: unknown) => void,
+      onComplete?: (
+        proof: {
+          withdrawalProof: WithdrawalProof;
+          calldata: bigint[];
+        },
+        completeWithdrawal: typeof withdrawal,
+        newSecretKeys: Record<'secret' | 'nullifier', Secret>,
+      ) => void,
     ) => {
       // Check for valid quote data immediately
-      if (!feeBPSForWithdraw || feeBPSForWithdraw === 0n || !feeCommitment) {
-        throw new Error('No valid quote available. Please ensure you have a valid quote before withdrawing.');
-      }
+      // if (!feeBPSForWithdraw || feeBPSForWithdraw === 0n || !feeCommitment) {
+      //   throw new Error('No valid quote available. Please ensure you have a valid quote before withdrawing.');
+      // }
 
-      if (TEST_MODE) return;
+      // if (TEST_MODE) return;
 
       const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
@@ -210,11 +216,11 @@ export const useWithdraw = () => {
       if (!poolAccount) missingFields.push('poolAccount');
       if (!target) missingFields.push('target');
       if (!commitment) missingFields.push('commitment');
-      if (!aspLeaves) missingFields.push('aspLeaves');
-      if (!stateLeaves) missingFields.push('stateLeaves');
-      if (!relayerDetails) missingFields.push('relayerDetails');
-      if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
-      if (!feeBPSForWithdraw) missingFields.push('feeBPS');
+      // if (!aspLeaves) missingFields.push('aspLeaves');
+      // if (!stateLeaves) missingFields.push('stateLeaves');
+      // if (!relayerDetails) missingFields.push('relayerDetails');
+      // if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
+      // if (!feeBPSForWithdraw) missingFields.push('feeBPS');
       if (!accountService) missingFields.push('accountService');
 
       if (missingFields.length > 0) {
@@ -222,9 +228,16 @@ export const useWithdraw = () => {
         throw new Error(`Missing required data: ${missingFields.join(', ')}`);
       }
 
+      let aspLeavesToUse = aspLeaves?.map(BigInt) || [];
+      let sateLeavesToUse = stateLeaves?.map(BigInt) || [];
+      let relayerAddressToUse: `0x${string}` = relayerDetails?.relayerAddress as never;
+      const feeBPSToUSe: string = feeBPSForWithdraw.toString() || '250';
+      const deposits = await getDeposits(selectedPoolInfo);
+
       // TypeScript assertions - we've already validated these exist above
       if (!relayerDetails || !relayerDetails.relayerAddress) {
-        throw new Error('Relayer details not available');
+        relayerAddressToUse = address!;
+        // throw new Error('Relayer details not available');
       }
       if (!commitment) {
         throw new Error('Commitment not available');
@@ -233,35 +246,37 @@ export const useWithdraw = () => {
         throw new Error('Account service not available');
       }
       if (!stateLeaves) {
-        throw new Error('State leaves not available');
+        sateLeavesToUse = deposits.map((a) => a.commitment);
+        // throw new Error('State leaves not available');
       }
       if (!aspLeaves) {
-        throw new Error('ASP leaves not available');
+        aspLeavesToUse = deposits.map((a) => a.label);
+        // throw new Error('ASP leaves not available');
       }
 
       let poolScope: Hash | bigint | undefined;
       let stateMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
       let aspMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
-      let merkleProofGenerated = false;
+      // let merkleProofGenerated = false;
 
       try {
         const newWithdrawal = prepareWithdrawRequest(
-          getAddress(target),
-          getAddress(selectedPoolInfo.entryPointAddress),
-          getAddress(relayerDetails.relayerAddress),
-          feeBPSForWithdraw.toString(),
+          target as `0x${string}`,
+          relayerAddressToUse,
+          feeBPSToUSe,
+          // feeBPSForWithdraw.toString(),
+          selectedPoolInfo,
         );
 
-        poolScope = await getScope(publicClient, selectedPoolInfo?.address);
-        stateMerkleProof = await getMerkleProof(stateLeaves?.map(BigInt) as bigint[], commitment.hash);
-        aspMerkleProof = await getMerkleProof(aspLeaves?.map(BigInt), commitment.label);
+        poolScope = await getScope(selectedPoolInfo);
+        stateMerkleProof = generateMerkleProof(sateLeavesToUse, commitment.hash);
+        aspMerkleProof = generateMerkleProof(aspLeavesToUse, commitment.label);
         const context = await getContext(newWithdrawal, poolScope as Hash);
         const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
 
         aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue
 
         const withdrawalProofInput = prepareWithdrawalProofInput(
-          commitment,
           parseUnits(amount, decimals),
           stateMerkleProof,
           aspMerkleProof,
@@ -269,32 +284,32 @@ export const useWithdraw = () => {
           secret,
           nullifier,
         );
-        if (aspMerkleProof && stateMerkleProof) merkleProofGenerated = true;
+        // if (aspMerkleProof && stateMerkleProof) merkleProofGenerated = true;
 
         // Use worker for progress updates, but still call actual SDK for proof generation
-        const workerPromise = new Promise((resolve, reject) => {
+        const workerPromise = new Promise<WorkerMessages['payload']>(async (resolve, reject) => {
           const worker = new Worker(new URL('../workers/zkProofWorker.ts', import.meta.url));
           const requestId = Math.random().toString(36).substring(2, 15);
 
           worker.onmessage = (event) => {
-            const { type, payload, id } = event.data;
+            const { type, payload, id } = event.data as WorkerMessages;
 
             if (id !== requestId) return;
 
             switch (type) {
-              case 'success':
+              case 'withdrawalProved':
                 worker.terminate();
                 resolve(payload);
                 break;
-              case 'error':
-                worker.terminate();
-                reject(new Error(payload.message));
-                break;
-              case 'progress':
-                if (onProgress) {
-                  onProgress(payload);
-                }
-                break;
+              // case 'error':
+              //   worker.terminate();
+              //   reject(new Error(payload.message));
+              //   break;
+              // case 'progress':
+              //   if (onProgress) {
+              //     onProgress(payload);
+              //   }
+              //   break;
             }
           };
 
@@ -311,13 +326,13 @@ export const useWithdraw = () => {
         });
 
         // Run both worker (for progress) and actual SDK call in parallel
-        const [, proof] = await Promise.all([workerPromise, generateWithdrawalProof(commitment, withdrawalProofInput)]);
+        const proof = await workerPromise;
 
         const verified = await verifyWithdrawalProof(proof);
 
         if (!verified) throw new Error('Proof verification failed');
 
-        setProof(proof);
+        setProof(proof as never);
         setWithdrawal(newWithdrawal);
         setNewSecretKeys({ secret, nullifier });
 
@@ -332,233 +347,169 @@ export const useWithdraw = () => {
 
         return proof;
       } catch (err) {
-        const error = err as TransactionExecutionError;
+        const error = err as Error;
 
         // Log proof generation error to Sentry
-        logErrorToSentry(error, {
-          operation_step: 'proof_generation',
-          error_type: error?.name || 'unknown',
-          has_pool_scope: !!poolScope,
-          merkle_proof_generated: merkleProofGenerated,
-          proof_verified: false,
-        });
+        // logErrorToSentry(error, {
+        //   operation_step: 'proof_generation',
+        //   error_type: error?.name || 'unknown',
+        //   has_pool_scope: !!poolScope,
+        //   merkle_proof_generated: merkleProofGenerated,
+        //   proof_verified: false,
+        // });
 
-        const errorMessage = getDefaultErrorMessage(error?.shortMessage || error?.message);
+        const errorMessage = getDefaultErrorMessage(error?.message);
         addNotification('error', errorMessage);
         console.error('Error generating proof', error);
         throw error;
       }
     },
-    [
-      feeCommitment,
-      feeBPSForWithdraw,
-      relayersData,
-      selectedRelayer?.url,
-      poolAccount,
-      target,
-      commitment,
-      aspLeaves,
-      stateLeaves,
-      accountService,
-      selectedPoolInfo,
-      publicClient,
-      amount,
-      decimals,
-      addNotification,
-      getDefaultErrorMessage,
-      setProof,
-      setWithdrawal,
-      setNewSecretKeys,
-      logErrorToSentry,
-    ],
+    [relayersData, poolAccount, target, commitment, accountService, aspLeaves, stateLeaves, feeBPSForWithdraw, selectedPoolInfo, selectedRelayer?.url, address, amount, decimals, setProof, setWithdrawal, setNewSecretKeys, getDefaultErrorMessage, addNotification],
   );
 
   const withdraw = useCallback(
-    async (proofData?: unknown, withdrawalData?: unknown, secretKeysData?: unknown) => {
+    async (
+      ...[proofData, withdrawalData, secretKeysData]: Parameters<
+        Exclude<Parameters<typeof generateProof>[1], undefined>
+      >
+    ) => {
       // Use passed data if available, otherwise use state
       const currentProof = proofData || proof;
       const currentWithdrawal = withdrawalData || withdrawal;
       const currentNewSecretKeys = secretKeysData || newSecretKeys;
-      if (!TEST_MODE) {
-        const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
+      // const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
-        if (
-          !currentProof ||
-          !currentWithdrawal ||
-          !commitment ||
-          !target ||
-          !relayerDetails ||
-          !relayerDetails.relayerAddress ||
-          !feeCommitment ||
-          !currentNewSecretKeys ||
-          !accountService
-        )
-          throw new Error('Missing required data to withdraw');
+      if (
+        !currentProof ||
+        !currentWithdrawal ||
+        !commitment ||
+        !target ||
+        // !relayerDetails ||
+        // !relayerDetails.relayerAddress ||
+        // !feeCommitment ||
+        !currentNewSecretKeys ||
+        !accountService
+      )
+        throw new Error('Missing required data to withdraw');
 
-        // Only switch chain if not already on the correct chain and not using Safe
-        if (!isSafeApp && walletClient?.chain?.id !== chainId) {
-          await switchChainAsync({ chainId });
-        }
+      // const poolScope = await getScope(snRpcProvider, selectedPoolInfo.address);
 
-        const poolScope = await getScope(publicClient, selectedPoolInfo.address);
+      try {
+        setIsClosable(false);
+        setIsLoading(true);
 
-        try {
-          setIsClosable(false);
-          setIsLoading(true);
+        // Reset the quote timer when transaction starts
+        resetQuote();
 
-          // Reset the quote timer when transaction starts
-          resetQuote();
+        const relayCall = await relay({
+          poolInfo: selectedPoolInfo,
+          proof: currentProof.calldata,
+          withdraw: currentWithdrawal,
+        });
 
-          const res = await relayerData.relay({
-            withdrawal: currentWithdrawal as WithdrawalRelayerPayload,
-            proof: (currentProof as { proof: unknown }).proof as ProofRelayerPayload,
-            publicSignals: (currentProof as { publicSignals: unknown }).publicSignals as string[],
-            scope: poolScope.toString(),
-            chainId,
-            feeCommitment,
-          });
+        const res = await sendAsync([relayCall]);
 
-          if (!res.success) {
-            // Check if the error is a known privacy pool error
-            const privacyPoolError = getPrivacyPoolErrorMessage(res.error || '');
-            const errorMessage = privacyPoolError || res.error || 'Relay failed';
+        // const res = await relayerData.relay({
+        //   withdrawal: currentWithdrawal as WithdrawalRelayerPayload,
+        //   proof: (currentProof as { proof: unknown }).proof as ProofRelayerPayload,
+        //   publicSignals: (currentProof as { publicSignals: unknown }).publicSignals as string[],
+        //   scope: poolScope.toString(),
+        //   chainId,
+        //   feeCommitment,
+        // });
 
-            // Log relayer error to Sentry
-            logErrorToSentry(new Error(errorMessage), {
-              operation_step: 'relayer_execution',
-              relayer_error: res.error,
-              relayer_success: res.success,
-              scope: poolScope.toString(),
-            });
+        const receipts = await waitForEvents('Withdraw', res.transaction_hash, selectedPoolInfo as never);
+        if (!receipts.length) throw new Error('Receipt not found');
+        const [{ withdrawnValue, blockNumber }] = receipts;
 
-            throw new Error(errorMessage);
-          }
+        // if (!res.success) {
+        //   // Check if the error is a known privacy pool error
+        //   const privacyPoolError = getPrivacyPoolErrorMessage(res.error || '');
+        //   const errorMessage = privacyPoolError || res.error || 'Relay failed';
 
-          if (!res.txHash) throw new Error('Relay response does not have tx hash');
+        //   // Log relayer error to Sentry
+        //   logErrorToSentry(new Error(errorMessage), {
+        //     operation_step: 'relayer_execution',
+        //     relayer_error: res.error,
+        //     relayer_success: res.success,
+        //     scope: poolScope.toString(),
+        //   });
 
-          setTransactionHash(res.txHash as Hex);
-          setModalOpen(ModalType.PROCESSING);
+        //   throw new Error(errorMessage);
+        // }
 
-          const receipt = await publicClient?.waitForTransactionReceipt({
-            hash: res.txHash as Hex,
-            timeout: 300_000, // 5 minutes timeout for withdrawal transactions
-          });
+        // if (!res.txHash) throw new Error('Relay response does not have tx hash');
 
-          if (!receipt) throw new Error('Receipt not found');
-
-          const events = decodeEventsFromReceipt(receipt, withdrawEventAbi);
-          const withdrawnEvents = events.filter((event) => event.eventName === 'Withdrawn');
-
-          // More robust event handling - try to find any event that looks like a withdrawal
-          if (!withdrawnEvents.length) {
-            // Try to find any event that might be the withdrawal event
-            const possibleWithdrawEvents = events.filter(
-              (event) =>
-                event.eventName &&
-                (event.eventName.toLowerCase().includes('withdraw') ||
-                  event.eventName.toLowerCase().includes('withdrawn')),
-            );
-
-            if (possibleWithdrawEvents.length > 0) {
-              // Use the first possible event
-              withdrawnEvents.push(possibleWithdrawEvents[0]);
-            } else {
-              // If still no events found, log more details and throw error
-              console.error('🔍 No withdrawal events found. All events:', events);
-              throw new Error('Withdraw event not found');
-            }
-          }
-
-          const { _value } = withdrawnEvents[0].args as {
-            _newCommitment: bigint;
-            _spentNullifier: bigint;
-            _value: bigint;
-          };
-
-          addWithdrawal(accountService, {
-            parentCommitment: commitment,
-            value: poolAccount?.balance - _value,
-            nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
-            secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
-            blockNumber: receipt.blockNumber,
-            txHash: res.txHash as Hex,
-          });
-
-          // Log successful withdrawal to Sentry for analytics
-          addBreadcrumb({
-            message: 'Withdrawal successful',
-            category: 'transaction',
-            data: {
-              transactionHash: res.txHash,
-              blockNumber: receipt.blockNumber.toString(),
-              value: _value.toString(),
-            },
-            level: 'info',
-          });
-
-          setModalOpen(ModalType.SUCCESS);
-        } catch (err) {
-          const error = err as TransactionExecutionError;
-
-          // Log withdrawal error to Sentry with full context
-          logErrorToSentry(error, {
-            operation_step: 'withdrawal_execution',
-            error_type: error?.name || 'unknown',
-            short_message: error?.shortMessage,
-            has_proof: !!currentProof,
-            has_withdrawal: !!currentWithdrawal,
-            has_new_secret_keys: !!currentNewSecretKeys,
-            pool_scope: poolScope?.toString(),
-          });
-
-          // Try to get a user-friendly error message
-          const privacyPoolError = getPrivacyPoolErrorMessage(error?.shortMessage || error?.message || '');
-          const errorMessage = privacyPoolError || getDefaultErrorMessage(error?.shortMessage || error?.message);
-
-          addNotification('error', errorMessage);
-          console.error('Error withdrawing', error);
-        }
-        // TEST MODE
-      } else {
-        if (!commitment) throw new Error('Missing required data to withdraw');
-
-        setTransactionHash(generatePrivateKey());
+        setTransactionHash(BigInt(res.transaction_hash));
         setModalOpen(ModalType.PROCESSING);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        addWithdrawal(accountService, {
+          parentCommitment: commitment,
+          value: poolAccount?.balance - withdrawnValue,
+          nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
+          secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
+          blockNumber: BigInt(blockNumber!),
+          txHash: res.transaction_hash as `0x${string}`,
+        });
+
+        // Log successful withdrawal to Sentry for analytics
+        addBreadcrumb({
+          message: 'Withdrawal successful',
+          category: 'transaction',
+          data: {
+            transactionHash: res.transaction_hash,
+            blockNumber: blockNumber?.toString(),
+            value: withdrawnValue.toString(),
+          },
+          level: 'info',
+        });
 
         setModalOpen(ModalType.SUCCESS);
+      } catch (err) {
+        const error = err as Error;
+
+        // Log withdrawal error to Sentry with full context
+        // logErrorToSentry(error, {
+        //   operation_step: 'withdrawal_execution',
+        //   error_type: error?.name || 'unknown',
+        //   short_message: error?.shortMessage,
+        //   has_proof: !!currentProof,
+        //   has_withdrawal: !!currentWithdrawal,
+        //   has_new_secret_keys: !!currentNewSecretKeys,
+        //   pool_scope: poolScope?.toString(),
+        // });
+
+        // Try to get a user-friendly error message
+        const privacyPoolError = getPrivacyPoolErrorMessage(error?.message || '');
+        const errorMessage = privacyPoolError || getDefaultErrorMessage(error?.message);
+
+        addNotification('error', errorMessage);
+        console.error('Error withdrawing', error);
       }
       setIsLoading(false);
       setIsClosable(true);
     },
     [
-      relayersData,
-      selectedRelayer?.url,
       proof,
       withdrawal,
+      newSecretKeys,
+      relayersData,
       commitment,
       target,
       feeCommitment,
-      newSecretKeys,
       accountService,
-      switchChainAsync,
-      chainId,
-      publicClient,
       selectedPoolInfo,
       setIsClosable,
-      setIsLoading,
+      selectedRelayer?.url,
+      resetQuote,
+      sendAsync,
       setTransactionHash,
       setModalOpen,
       addWithdrawal,
-      poolAccount,
+      poolAccount?.balance,
       getPrivacyPoolErrorMessage,
-      logErrorToSentry,
-      addNotification,
       getDefaultErrorMessage,
-      relayerData,
-      resetQuote,
-      isSafeApp,
-      walletClient?.chain?.id,
+      addNotification,
     ],
   );
 

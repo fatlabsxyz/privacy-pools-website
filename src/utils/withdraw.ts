@@ -1,15 +1,26 @@
+import { Contract, FunctionAbi, RpcProvider } from 'starknet';
 import { AbiEvent, Address, getAddress } from 'viem';
 import { usePublicClient } from 'wagmi';
 import { LeafInsertedLog } from '~/types';
 import { leafInserted, scope } from '~/utils';
 
-export const getScope = async (publicClient: ReturnType<typeof usePublicClient>, poolAddress: Address) => {
-  const poolScope = (await publicClient?.readContract({
-    address: getAddress(poolAddress),
-    abi: scope,
-    functionName: 'SCOPE',
-    args: [],
-  })) as bigint;
+const scopeAbi = [
+  {
+    name: 'scope',
+    type: 'function',
+    inputs: [],
+    outputs: [
+      {
+        name: '_scope',
+        type: 'core::integer::u64',
+      },
+    ],
+  },
+] as const satisfies [FunctionAbi];
+
+export const getScope = async (provider: RpcProvider, poolAddress: Address) => {
+  const contract = new Contract(scopeAbi, poolAddress, provider);
+  const poolScope = (await contract.call('scope')) as bigint;
 
   if (!poolScope) throw new Error('Pool scope not found');
 

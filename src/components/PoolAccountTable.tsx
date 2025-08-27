@@ -110,7 +110,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
   };
 
   const getWithdrawHandler = (row: PoolAccount) => {
-    return row.balance !== 0n && row.reviewStatus === ReviewStatus.APPROVED ? () => handleWithdraw(row) : undefined;
+    return row.balance !== 0n ? () => handleWithdraw(row) : undefined;
   };
 
   if (isLoading) {

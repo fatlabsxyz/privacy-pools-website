@@ -1,39 +1,25 @@
-import { Address, encodeAbiParameters, Hex, isAddress, parseAbiParameters } from 'viem';
-import { Secret, AccountCommitment, Withdrawal, WithdrawalProofInput, Hash } from '~/types';
+import { serializeRelayData } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { Address } from '@starknet-react/chains';
+import { validateAndParseAddress } from 'starknet';
+import { PoolInfo } from '~/config';
+import { Secret, WithdrawalProofInput, Hash } from '~/types';
 import { getMerkleProof } from '~/utils';
 
-const encodeWithdrawData = (recipient: Address, feeRecipient: Address, relayFeeBPS: bigint): Hex => {
-  const encodedData = encodeAbiParameters(
-    parseAbiParameters('address recipient, address feeRecipient, uint256 relayFeeBPS'),
-    [recipient, feeRecipient, relayFeeBPS],
-  );
-
-  return encodedData as Hex;
-};
-
-export const prepareWithdrawRequest = (
-  recipient: Address,
-  processooor: Address,
-  relayer: Address,
-  feeBPS: string,
-): Withdrawal => {
-  if (!isAddress(recipient) || !isAddress(processooor) || !isAddress(relayer) || isNaN(Number(feeBPS))) {
-    throw new Error('Invalid input for prepareWithdrawRequest');
-  }
+export const prepareWithdrawRequest = (recipient: Address, relayer: Address, feeBPS: string, poolInfo: PoolInfo) => {
+  const validatedRecipient = validateAndParseAddress(recipient);
 
   return {
-    processooor: processooor,
-    data: encodeWithdrawData(recipient, relayer, BigInt(feeBPS)),
+    processor: poolInfo.entryPointAddress,
+    data: serializeRelayData({
+      recipient: validatedRecipient,
+      feeRecipient: relayer,
+      relayFeeBPS: feeBPS,
+    }),
+    // data: encodeWithdrawData(recipient, relayer, BigInt(feeBPS)),
   };
 };
 
-function padArray(arr: bigint[], length: number): bigint[] {
-  if (arr.length >= length) return arr;
-  return [...arr, ...Array(length - arr.length).fill(BigInt(0))];
-}
-
 export const prepareWithdrawalProofInput = (
-  commitment: AccountCommitment,
   amount: bigint,
   stateMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>,
   aspMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>,
@@ -45,20 +31,20 @@ export const prepareWithdrawalProofInput = (
     withdrawalAmount: amount,
     stateMerkleProof: {
       root: stateMerkleProof.root as Hash,
-      leaf: commitment.hash,
+      leaf: stateMerkleProof.leaf,
       index: stateMerkleProof.index,
-      siblings: padArray(stateMerkleProof.siblings as bigint[], 32), // Pad to 32 length
+      siblings: stateMerkleProof.siblings, // Pad to 32 length
     },
     aspMerkleProof: {
       root: aspMerkleProof.root as Hash,
-      leaf: commitment.label,
+      leaf: aspMerkleProof.leaf,
       index: aspMerkleProof.index,
-      siblings: padArray(aspMerkleProof.siblings as bigint[], 32), // Pad to 32 length
+      siblings: aspMerkleProof.siblings, // Pad to 32 length
     },
     stateRoot: stateMerkleProof.root as Hash,
     aspRoot: aspMerkleProof.root as Hash,
-    stateTreeDepth: BigInt(32), // Double check
-    aspTreeDepth: BigInt(32), // Double check
+    stateTreeDepth: 5n, // Double check
+    aspTreeDepth: 5n, // Double check
     context: context,
     newSecret: secret,
     newNullifier: nullifier,

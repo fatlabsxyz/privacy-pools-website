@@ -1,9 +1,7 @@
 'use client';
 import React from 'react';
-import { sepolia, mainnet } from '@starknet-react/chains';
 import { StarknetConfig, publicProvider, ready, braavos, useInjectedConnectors, voyager } from '@starknet-react/core';
-import { getEnv } from '~/config/env';
-const { TEST_MODE } = getEnv();
+import { whitelistedChains } from '~/config';
 
 export function StarknetProvider({ children }: { children: React.ReactNode }) {
   const { connectors } = useInjectedConnectors({
@@ -13,10 +11,10 @@ export function StarknetProvider({ children }: { children: React.ReactNode }) {
     includeRecommended: 'always',
   });
 
-  const chains = TEST_MODE ? [sepolia] : [mainnet];
+  const chains = whitelistedChains;
 
   return (
-    <StarknetConfig chains={chains} provider={publicProvider()} connectors={connectors} explorer={voyager}>
+    <StarknetConfig chains={chains as never} provider={publicProvider()} connectors={connectors} explorer={voyager}>
       {children}
     </StarknetConfig>
   );

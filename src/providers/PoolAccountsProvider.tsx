@@ -13,10 +13,14 @@ import {
   HistoryData,
   PoolAccount,
   RagequitProof,
-  Withdrawal,
   WithdrawalProof,
+  WithdrawalRelayerPayload,
 } from '~/types';
 import { assetConfig } from '~/utils';
+
+type Withdraw = Omit<WithdrawalRelayerPayload, 'data'> & {
+  data: string[];
+};
 
 type ContextType = {
   vettingFeeBPS: bigint;
@@ -38,8 +42,8 @@ type ContextType = {
   // Transaction
   proof: WithdrawalProof | RagequitProof | CommitmentProof | null;
   setProof: (val: WithdrawalProof | RagequitProof | CommitmentProof) => void;
-  withdrawal: Withdrawal | null;
-  setWithdrawal: (val: Withdrawal) => void;
+  withdrawal: Withdraw | null;
+  setWithdrawal: (val: Withdraw) => void;
   newSecretKeys: { secret: bigint; nullifier: bigint } | null;
   setNewSecretKeys: (val: { secret: bigint; nullifier: bigint }) => void;
   transactionHash: Hex | undefined;
