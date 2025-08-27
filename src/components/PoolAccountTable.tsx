@@ -134,7 +134,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
               <TableRow>
                 <HTableCell sx={{ paddingLeft: 0 }}>Account</HTableCell>
                 <HTableCell>Value</HTableCell>
-                <HTableCell>Created</HTableCell>
+                {/* <HTableCell>Created</HTableCell> */}
                 <HTableCell sx={{ paddingRight: 0 }}>Status</HTableCell>
                 <HTableCell align='right'></HTableCell>
               </TableRow>
@@ -157,7 +157,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
                       ? formatTimestamp(row.deposit.timestamp?.toString() ?? '').slice(0, 10)
                       : formatTimestamp(row.deposit.timestamp?.toString() ?? '')}
                   </STableCell>
-
+                  {/* 
                   <STableCell sx={{ paddingRight: mobile ? 0 : '1rem', textAlign: 'left' }}>
                     <Tooltip
                       title={getRowReviewStatus(row) === ReviewStatus.PENDING ? statusMessage : ''}
@@ -166,7 +166,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
                     >
                       <StatusChip status={getRowReviewStatus(row)} compact={mobile} />
                     </Tooltip>
-                  </STableCell>
+                  </STableCell> */}
 
                   <MenuCell align='right' onClick={(e) => handleToggle(e, row.name - 1)} data-testid='dotted-menu'>
                     <SIconButton>

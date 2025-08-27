@@ -113,13 +113,13 @@ export const PoolAccountsPreview = () => {
                 </EthText>
               </Stack>
 
-              <Stack width='50%' gap={1}>
+              {/* <Stack width='50%' gap={1}>
                 <Subtitle variant='caption'>Being validated:</Subtitle>
                 <EthText variant='subtitle1' fontWeight='bold'>
                   {formatUnits(pendingAmountPoolAsset, assetDecimals || decimals)}
                   <span> {symbol}</span>
                 </EthText>
-              </Stack>
+              </Stack> */}
             </Stack>
           )}
         </Section>
