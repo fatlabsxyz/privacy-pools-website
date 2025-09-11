@@ -11,8 +11,14 @@ export const PoolAccountsFull = () => {
   const {
     balanceBN: { symbol, decimals },
   } = useChainContext();
-  const { poolAccounts, allPools, amountPoolAsset, pendingAmountPoolAsset, hideEmptyPools, toggleHideEmptyPools } =
-    useAccountContext();
+  const {
+    poolAccounts,
+    allPools,
+    amountPoolAsset,
+    // pendingAmountPoolAsset,
+    hideEmptyPools,
+    toggleHideEmptyPools,
+  } = useAccountContext();
   const { ITEMS_PER_PAGE, fullPoolAccounts } = useAdvancedView();
   const { isLogged } = useAuthContext();
 

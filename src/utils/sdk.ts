@@ -181,7 +181,9 @@ export const createAccount = (seed: string) => {
 };
 
 export const loadAccount = async (seed: string) => {
-  const { account } = await AccountService.initializeWithEvents(dataService as never, { mnemonic: seed }, pools);
+  // const { account } = await AccountService.initializeWithEvents(dataService as never, { mnemonic: seed }, pools);
+  const account = new AccountService(dataService as never, { mnemonic: seed });
+  await account.retrieveHistory(pools);
   return account;
 };
 

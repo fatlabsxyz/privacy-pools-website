@@ -12,7 +12,7 @@ import {
   IconButton,
   useTheme,
 } from '@mui/material';
-import { useAccount } from '@starknet-react/core';
+import { useAccount, useStarkName } from '@starknet-react/core';
 import { formatUnits } from 'viem';
 import { useGoTo, useChainContext, useAuthContext } from '~/hooks';
 import { formatDataNumber, getUsdBalance, ROUTER, truncateAddress, zIndex, useClipboard } from '~/utils';
@@ -20,16 +20,10 @@ import { formatDataNumber, getUsdBalance, ROUTER, truncateAddress, zIndex, useCl
 export const Menu = () => {
   const { address } = useAccount();
 
-  // ENS hooks for the connected user
-  // const { data: ensName } = useEnsName({
-  //   address: address,
-  //   chainId: 1, // Always use mainnet for ENS
-  // });
+  const { data: starkName } = useStarkName({
+    address: address,
+  });
 
-  // const { data: ensAvatar } = useEnsAvatar({
-  //   name: ensName || undefined,
-  //   chainId: 1, // Always use mainnet for ENS
-  // });
   const {
     price,
     balanceBN: { value, symbol, decimals },
@@ -101,7 +95,7 @@ export const Menu = () => {
           <ListItemIcon>
             <Wallet size={16} />
           </ListItemIcon>
-          {truncateAddress(address!)}
+          {starkName || truncateAddress(address!)}
 
           {copied ? (
             <Checkmark size={16} color={theme.palette.text.disabled} />

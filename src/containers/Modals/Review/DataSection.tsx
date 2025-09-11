@@ -13,7 +13,11 @@ import {
   useRequestQuote,
   useNotifications,
 } from '~/hooks';
-import { EventType, QuoteRequestBody, QuoteResponse } from '~/types';
+import {
+  EventType,
+  // QuoteRequestBody,
+  // QuoteResponse
+} from '~/types';
 import { getUsdBalance, truncateAddress } from '~/utils';
 import { FeeBreakdown, formatFeeDisplay } from './FeeBreakdown';
 

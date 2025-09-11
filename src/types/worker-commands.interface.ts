@@ -3,6 +3,7 @@ import {
   PrivacyPoolStarknetSDK,
   WithdrawalProofInput,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { deposit, rageQuit } from '~/utils';
 
 export interface ZKProofWorkerMessage {
   type: 'generateRagequitProof' | 'generateWithdrawalProof' | 'verifyWithdrawalProof';
@@ -29,11 +30,34 @@ export interface WithdrawalProved {
   payload: Awaited<ReturnType<PrivacyPoolStarknetSDK['proveWithdrawalSN']>>;
 }
 
+export interface ProveDepositCommand {
+  type: 'generateDepositProve';
+  payload: Parameters<typeof deposit>[0];
+}
+
+export interface DepositProved {
+  type: 'depositProved';
+  payload: Awaited<ReturnType<typeof deposit>>;
+}
+
 export interface WorkerStarted {
   type: 'ready';
 }
 
-export type WorkerMessages = { id: string } & WithdrawalProved;
+export interface ProveRageQuitCommand {
+  type: 'generateRagequiteProve';
+  payload: Parameters<typeof rageQuit>[0];
+}
+
+export interface RageQuitProved {
+  type: 'rageQuitProved';
+  payload: Awaited<ReturnType<typeof rageQuit>>;
+}
+
+export type WorkerMessages = { id: string } & (WithdrawalProved | DepositProved | RageQuitProved);
 export type WorkerCommands = {
   id: string;
-} & ProveWithdrawal;
+} & (ProveWithdrawal | ProveDepositCommand | ProveRageQuitCommand);
+
+export type WorkerCommandsTypes = WorkerCommands['type'];
+export type WorkerMessagesTypes = WorkerMessages['type'];

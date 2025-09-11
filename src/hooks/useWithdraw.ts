@@ -3,7 +3,7 @@ import { generateMerkleProof, WithdrawalProof } from '@fatsolutions/privacy-pool
 import { addBreadcrumb } from '@sentry/nextjs';
 import { useAccount, useSendTransaction } from '@starknet-react/core';
 import { parseUnits } from 'viem';
-import { getConfig } from '~/config';
+// import { getConfig } from '~/config';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
   useExternalServices,
@@ -14,7 +14,6 @@ import {
   useChainContext,
 } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
-import { WorkerMessages } from '~/types/worker-commands.interface';
 import {
   prepareWithdrawRequest,
   getContext,
@@ -22,13 +21,12 @@ import {
   verifyWithdrawalProof,
   prepareWithdrawalProofInput,
   createWithdrawalSecrets,
-  snRpcProvider,
   waitForEvents,
   relay,
   getScope,
   getDeposits,
 } from '~/utils';
-
+import { useSdk } from './useSdkWorker';
 
 const PRIVACY_POOL_ERRORS = {
   'Error: InvalidProof()': 'Failed to verify withdrawal proof. Please regenerate your proof and try again.',
@@ -54,6 +52,7 @@ export const useWithdraw = () => {
   const { sendAsync } = useSendTransaction({});
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
+  const { withdraw: sdkWithdraw } = useSdk();
   const { setModalOpen, setIsClosable } = useModal();
   const {
     aspData,
@@ -81,7 +80,7 @@ export const useWithdraw = () => {
     newSecretKeys,
     setNewSecretKeys,
     setTransactionHash,
-    feeCommitment,
+    // feeCommitment,
     feeBPSForWithdraw,
   } = usePoolAccountsContext();
 
@@ -234,6 +233,17 @@ export const useWithdraw = () => {
       const feeBPSToUSe: string = feeBPSForWithdraw.toString() || '250';
       const deposits = await getDeposits(selectedPoolInfo);
 
+      const aspRootHasBeenUpdated = new Promise<void>((resolve) => {
+        const labels = deposits.map((d) => d.label).join(' ');
+        console.log('Copy these labels, update the ASP Root and then call "rootHasBeenUpdated". Labels:');
+        console.log(labels);
+        (window as unknown as { rootHasBeenUpdated: () => void }).rootHasBeenUpdated = () => {
+          resolve();
+        };
+      });
+
+      await aspRootHasBeenUpdated;
+
       // TypeScript assertions - we've already validated these exist above
       if (!relayerDetails || !relayerDetails.relayerAddress) {
         relayerAddressToUse = address!;
@@ -286,47 +296,7 @@ export const useWithdraw = () => {
         );
         // if (aspMerkleProof && stateMerkleProof) merkleProofGenerated = true;
 
-        // Use worker for progress updates, but still call actual SDK for proof generation
-        const workerPromise = new Promise<WorkerMessages['payload']>(async (resolve, reject) => {
-          const worker = new Worker(new URL('../workers/zkProofWorker.ts', import.meta.url));
-          const requestId = Math.random().toString(36).substring(2, 15);
-
-          worker.onmessage = (event) => {
-            const { type, payload, id } = event.data as WorkerMessages;
-
-            if (id !== requestId) return;
-
-            switch (type) {
-              case 'withdrawalProved':
-                worker.terminate();
-                resolve(payload);
-                break;
-              // case 'error':
-              //   worker.terminate();
-              //   reject(new Error(payload.message));
-              //   break;
-              // case 'progress':
-              //   if (onProgress) {
-              //     onProgress(payload);
-              //   }
-              //   break;
-            }
-          };
-
-          worker.onerror = (error) => {
-            worker.terminate();
-            reject(error);
-          };
-
-          worker.postMessage({
-            type: 'generateWithdrawalProof',
-            payload: { commitment, input: withdrawalProofInput },
-            id: requestId,
-          });
-        });
-
-        // Run both worker (for progress) and actual SDK call in parallel
-        const proof = await workerPromise;
+        const proof = await sdkWithdraw({ commitment, input: withdrawalProofInput });
 
         const verified = await verifyWithdrawalProof(proof);
 
@@ -364,7 +334,27 @@ export const useWithdraw = () => {
         throw error;
       }
     },
-    [relayersData, poolAccount, target, commitment, accountService, aspLeaves, stateLeaves, feeBPSForWithdraw, selectedPoolInfo, selectedRelayer?.url, address, amount, decimals, setProof, setWithdrawal, setNewSecretKeys, getDefaultErrorMessage, addNotification],
+    [
+      relayersData,
+      poolAccount,
+      target,
+      commitment,
+      accountService,
+      aspLeaves,
+      stateLeaves,
+      feeBPSForWithdraw,
+      selectedPoolInfo,
+      selectedRelayer?.url,
+      address,
+      amount,
+      decimals,
+      sdkWithdraw,
+      setProof,
+      setWithdrawal,
+      setNewSecretKeys,
+      getDefaultErrorMessage,
+      addNotification,
+    ],
   );
 
   const withdraw = useCallback(
@@ -440,7 +430,7 @@ export const useWithdraw = () => {
 
         // if (!res.txHash) throw new Error('Relay response does not have tx hash');
 
-        setTransactionHash(BigInt(res.transaction_hash));
+        setTransactionHash(res.transaction_hash as `0x${string}`);
         setModalOpen(ModalType.PROCESSING);
 
         addWithdrawal(accountService, {
@@ -493,14 +483,11 @@ export const useWithdraw = () => {
       proof,
       withdrawal,
       newSecretKeys,
-      relayersData,
       commitment,
       target,
-      feeCommitment,
       accountService,
       selectedPoolInfo,
       setIsClosable,
-      selectedRelayer?.url,
       resetQuote,
       sendAsync,
       setTransactionHash,

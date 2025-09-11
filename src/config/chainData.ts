@@ -1,14 +1,23 @@
-import { Chain, mainnet, sepolia, Address, devnet } from '@starknet-react/chains';
-import { parseEther, parseUnits } from 'viem';
+import {
+  Chain,
+  mainnet,
+  // sepolia,
+  Address,
+  devnet,
+} from '@starknet-react/chains';
+import {
+  parseEther,
+  // parseUnits
+} from 'viem';
 import { getEnv } from '~/config/env';
-import daiIcon from '~/assets/icons/dai.svg';
+// import daiIcon from '~/assets/icons/dai.svg';
 import mainnetIcon from '~/assets/icons/mainnet_color.svg';
-import susdsIcon from '~/assets/icons/susds.svg';
-import usdcIcon from '~/assets/icons/usdc.svg';
-import usdsIcon from '~/assets/icons/usds.svg';
-import usdtIcon from '~/assets/icons/usdt.svg';
-import wbtcIcon from '~/assets/icons/wbtc.svg';
-import wstethIcon from '~/assets/icons/wsteth.svg';
+// import susdsIcon from '~/assets/icons/susds.svg';
+// import usdcIcon from '~/assets/icons/usdc.svg';
+// import usdsIcon from '~/assets/icons/usds.svg';
+// import usdtIcon from '~/assets/icons/usdt.svg';
+// import wbtcIcon from '~/assets/icons/wbtc.svg';
+// import wstethIcon from '~/assets/icons/wsteth.svg';
 
 const { ALCHEMY_KEY, IS_TESTNET, ASP_ENDPOINT } = getEnv();
 

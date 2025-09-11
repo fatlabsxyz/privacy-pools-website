@@ -128,7 +128,7 @@ export const SeedPhraseForm = ({
       (verificationWord, index) => verificationInputs[index] === verificationWord.word.toLowerCase(),
     );
 
-    if (isCorrect || true) {
+    if (isCorrect) {
       setVerificationError(false);
       onVerificationComplete?.(true);
     } else {
@@ -228,7 +228,7 @@ export const SeedPhraseForm = ({
           <Button
             variant='contained'
             onClick={handleVerificationSubmit}
-            // disabled={verificationInputs.some((input) => input === '')}
+            disabled={verificationInputs.some((input) => input === '')}
           >
             Verify
           </Button>

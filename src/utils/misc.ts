@@ -1,6 +1,6 @@
 import { Connector } from '@starknet-react/core';
-import { BatchClient, RpcProvider } from 'starknet';
-import { formatUnits, parseUnits, PublicClient } from 'viem';
+import { RpcProvider } from 'starknet';
+import { formatUnits, parseUnits } from 'viem';
 import { EventType, ReviewStatus, StatusObject } from '~/types';
 
 export const getUsdBalance = (price: number | null, balance: string, decimals: number): string => {

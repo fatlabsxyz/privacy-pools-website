@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Box, Button, CircularProgress, Stack, styled, Switch, Typography } from '@mui/material';
-import { parseUnits } from 'viem';
+// import { parseUnits } from 'viem';
 import { BaseModal } from '~/components';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -14,8 +14,8 @@ import {
   useWithdraw,
   useExternalServices,
   useChainContext,
-  useRequestQuote,
-  useNotifications,
+  // useRequestQuote,
+  // useNotifications,
 } from '~/hooks';
 import { EventType, ModalType } from '~/types';
 import { ModalContainer, ModalTitle } from '../Deposit';
@@ -42,20 +42,26 @@ export const ReviewModal = () => {
 
   // Quote logic for withdrawals
   const {
-    balanceBN: { decimals },
+    // balanceBN: { decimals },
     selectedPoolInfo,
-    chainId,
+    // chainId,
   } = useChainContext();
-  const { currentSelectedRelayerData, relayerData } = useExternalServices();
-  const { addNotification } = useNotifications();
+  const {
+    // currentSelectedRelayerData,
+    relayerData,
+  } = useExternalServices();
+  // const { addNotification } = useNotifications();
 
   // Helper function to determine if current asset is a stablecoin
   const isStablecoin = (assetSymbol: string): boolean => {
     return ['USDT', 'USDC', 'USDS', 'sUSDS', 'DAI'].includes(assetSymbol);
   };
 
-  const amountBN = parseUnits(amount, decimals);
-  const { getQuote, isQuoteLoading } = relayerData || {};
+  // const amountBN = parseUnits(amount, decimals);
+  const {
+    // getQuote,
+    isQuoteLoading,
+  } = relayerData || {};
   // const { isQuoteValid, isExpired, requestNewQuote } = useRequestQuote({
   //   getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
   //   isQuoteLoading: isQuoteLoading || false,

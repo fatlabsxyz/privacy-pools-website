@@ -76,7 +76,7 @@ export const useAccountType = () => {
       }
 
       // Finally check for MetaMask Smart Account
-      const type = await detectAccountType(address, chainId);
+      const type = await detectAccountType(address, +chainId);
       setAccountType(type);
     } catch (error) {
       console.error('Failed to detect account type:', error);

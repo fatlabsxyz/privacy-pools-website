@@ -97,7 +97,7 @@ export const GeneratingModal = () => {
     }
 
     if (actionType === EventType.EXIT) {
-      generateProofAndExit(updateProgress)
+      generateProofAndExit()
         .then(() => {
           // generateProofAndExit handles the full flow including transaction processing
           // Modal transitions are handled by the exit hook

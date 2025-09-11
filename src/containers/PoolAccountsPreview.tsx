@@ -21,7 +21,7 @@ export const PoolAccountsPreview = () => {
     poolsByAssetAndChain,
     allPools,
     amountPoolAsset,
-    pendingAmountPoolAsset,
+    // pendingAmountPoolAsset,
     hideEmptyPools,
     toggleHideEmptyPools,
   } = useAccountContext();

@@ -6,8 +6,9 @@ import { parseUnits, TransactionExecutionError } from 'viem';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
 import { createDepositSecrets } from '~/utils';
-import { deposit as sNDeposit, waitForEvents } from '../utils/sdk';
+import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
+import { useSdk } from './useSdkWorker';
 
 export const useDeposit = () => {
   const { address } = useAccount();
@@ -15,6 +16,7 @@ export const useDeposit = () => {
     selectedPoolInfo,
     balanceBN: { decimals },
   } = useChainContext();
+  const { deposit: sdkDeposit } = useSdk();
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const { setModalOpen, setIsClosable } = useModal();
   const { sendAsync } = useSendTransaction({});
@@ -48,7 +50,7 @@ export const useDeposit = () => {
 
       // Only set transaction hash and modal if not already done in Safe batch path
       setModalOpen(ModalType.PROCESSING);
-      const trData = await sNDeposit({
+      const trData = await sdkDeposit({
         amount: value,
         entryPoint: selectedPoolInfo.entryPointAddress,
         precommitment: precommitmentHash,

@@ -9,7 +9,6 @@ export * from './proof';
 export * from './aspClient';
 export * from './relayerClient';
 export * from './sdk';
-export * from './withdraw';
 export * from './seedPhrase';
 export * from './clipboard';
 export * from './eip7702';

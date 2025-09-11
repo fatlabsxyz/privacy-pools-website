@@ -3,7 +3,7 @@
 import { createContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Uint256 } from 'starknet';
-import { Address, createPublicClient, getAddress, Hex, http } from 'viem';
+import { Address, createPublicClient, getAddress, http } from 'viem';
 import { whitelistedChains } from '~/config';
 import { useChainContext } from '~/hooks';
 import {
@@ -46,8 +46,8 @@ type ContextType = {
   setWithdrawal: (val: Withdraw) => void;
   newSecretKeys: { secret: bigint; nullifier: bigint } | null;
   setNewSecretKeys: (val: { secret: bigint; nullifier: bigint }) => void;
-  transactionHash: Hex | undefined;
-  setTransactionHash: (val: TxHash) => void;
+  transactionHash: Address | undefined;
+  setTransactionHash: (val: Address) => void;
   actionType: EventType | undefined;
   setActionType: (val?: EventType) => void;
   feeCommitment: FeeCommitment | null;
@@ -74,14 +74,14 @@ export const PoolAccountsProvider = ({ children }: Props) => {
   } = useChainContext();
 
   const [actionType, setActionType] = useState<EventType>();
-  const [transactionHash, setTransactionHash] = useState<TxHash>();
+  const [transactionHash, setTransactionHash] = useState<Address>();
 
   const [amount, setAmount] = useState<string>('');
   const [target, setTarget] = useState<Address | ''>('');
   const [poolAccount, setPoolAccount] = useState<PoolAccount>();
 
   const [proof, setProof] = useState<ContextType['proof']>(null);
-  const [withdrawal, setWithdrawal] = useState<Withdrawal | null>(null);
+  const [withdrawal, setWithdrawal] = useState<Withdraw | null>(null);
   const [newSecretKeys, setNewSecretKeys] = useState<{ secret: bigint; nullifier: bigint } | null>(null);
   const [feeCommitment, setFeeCommitment] = useState<FeeCommitment | null>(null);
   const [feeBPSForWithdraw, setFeeBPSForWithdraw] = useState<bigint>(BigInt(0));
@@ -116,7 +116,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
     enabled: !!selectedPoolInfo,
     queryFn: async () => {
       const publicClient = createPublicClient({
-        chain: whitelistedChains.find((chain) => chain.id.toString() === chainId),
+        chain: whitelistedChains.find((chain) => chain.id.toString() === chainId) as never,
         transport: http(rpcUrl),
       });
 
