@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { generateMerkleProof, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
-import { useAccount, useSendTransaction } from '@starknet-react/core';
 import { parseUnits } from 'viem';
 // import { getConfig } from '~/config';
 import { useQuoteContext } from '~/contexts/QuoteContext';
@@ -22,7 +21,6 @@ import {
   prepareWithdrawalProofInput,
   createWithdrawalSecrets,
   waitForEvents,
-  relay,
   getScope,
   getDeposits,
 } from '~/utils';
@@ -48,17 +46,12 @@ const PRIVACY_POOL_ERRORS = {
 } as const;
 
 export const useWithdraw = () => {
-  const { address } = useAccount();
-  const { sendAsync } = useSendTransaction({});
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const { withdraw: sdkWithdraw } = useSdk();
   const { setModalOpen, setIsClosable } = useModal();
-  const {
-    aspData,
-    // relayerData
-  } = useExternalServices();
-  const { resetQuote } = useQuoteContext();
+  const { aspData, relayerData } = useExternalServices();
+  const { resetQuote, quoteState } = useQuoteContext();
   const {
     selectedPoolInfo,
     // chainId,
@@ -229,7 +222,7 @@ export const useWithdraw = () => {
 
       let aspLeavesToUse = aspLeaves?.map(BigInt) || [];
       let sateLeavesToUse = stateLeaves?.map(BigInt) || [];
-      let relayerAddressToUse: `0x${string}` = relayerDetails?.relayerAddress as never;
+      const relayerAddressToUse: `0x${string}` = relayerDetails?.relayerAddress as never;
       const feeBPSToUSe: string = feeBPSForWithdraw.toString() || '250';
       const deposits = await getDeposits(selectedPoolInfo);
 
@@ -246,8 +239,8 @@ export const useWithdraw = () => {
 
       // TypeScript assertions - we've already validated these exist above
       if (!relayerDetails || !relayerDetails.relayerAddress) {
-        relayerAddressToUse = address!;
-        // throw new Error('Relayer details not available');
+        // relayerAddressToUse = address!;
+        throw new Error('Relayer details not available');
       }
       if (!commitment) {
         throw new Error('Commitment not available');
@@ -345,7 +338,6 @@ export const useWithdraw = () => {
       feeBPSForWithdraw,
       selectedPoolInfo,
       selectedRelayer?.url,
-      address,
       amount,
       decimals,
       sdkWithdraw,
@@ -367,22 +359,22 @@ export const useWithdraw = () => {
       const currentProof = proofData || proof;
       const currentWithdrawal = withdrawalData || withdrawal;
       const currentNewSecretKeys = secretKeysData || newSecretKeys;
-      // const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
+      const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
       if (
         !currentProof ||
         !currentWithdrawal ||
         !commitment ||
         !target ||
-        // !relayerDetails ||
-        // !relayerDetails.relayerAddress ||
+        !relayerDetails ||
+        !relayerDetails.relayerAddress ||
         // !feeCommitment ||
         !currentNewSecretKeys ||
         !accountService
       )
         throw new Error('Missing required data to withdraw');
 
-      // const poolScope = await getScope(snRpcProvider, selectedPoolInfo.address);
+      const scope = await getScope(selectedPoolInfo);
 
       try {
         setIsClosable(false);
@@ -391,13 +383,13 @@ export const useWithdraw = () => {
         // Reset the quote timer when transaction starts
         resetQuote();
 
-        const relayCall = await relay({
-          poolInfo: selectedPoolInfo,
-          proof: currentProof.calldata,
-          withdraw: currentWithdrawal,
-        });
+        // const relayCall = await relay({
+        //   poolInfo: selectedPoolInfo,
+        //   proof: currentProof.calldata,
+        //   withdraw: currentWithdrawal,
+        // });
 
-        const res = await sendAsync([relayCall]);
+        // const res = await sendAsync([relayCall]);
 
         // const res = await relayerData.relay({
         //   withdrawal: currentWithdrawal as WithdrawalRelayerPayload,
@@ -408,7 +400,23 @@ export const useWithdraw = () => {
         //   feeCommitment,
         // });
 
-        const receipts = await waitForEvents('Withdraw', res.transaction_hash, selectedPoolInfo as never);
+        const res = await relayerData.relay({
+          feeCommitment: {
+            signedRelayerCommitment: quoteState.quoteCommitment?.signedRelayerCommitment as string,
+            withdrawalData: currentWithdrawal.data,
+            asset: selectedPoolInfo.assetAddress,
+            expiration: quoteState.quoteCommitment?.expiration || 0,
+            amount: BigInt(amount),
+            extraGas: quoteState.extraGas,
+          },
+          scope,
+          withdrawal: currentWithdrawal,
+          ...currentProof.withdrawalProof,
+        });
+
+        const txHash = res.txHash as `0x${string}`;
+
+        const receipts = await waitForEvents('Withdraw', txHash, selectedPoolInfo as never);
         if (!receipts.length) throw new Error('Receipt not found');
         const [{ withdrawnValue, blockNumber }] = receipts;
 
@@ -430,7 +438,7 @@ export const useWithdraw = () => {
 
         // if (!res.txHash) throw new Error('Relay response does not have tx hash');
 
-        setTransactionHash(res.transaction_hash as `0x${string}`);
+        setTransactionHash(txHash);
         setModalOpen(ModalType.PROCESSING);
 
         addWithdrawal(accountService, {
@@ -439,7 +447,7 @@ export const useWithdraw = () => {
           nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
           secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
           blockNumber: BigInt(blockNumber!),
-          txHash: res.transaction_hash as `0x${string}`,
+          txHash: txHash,
         });
 
         // Log successful withdrawal to Sentry for analytics
@@ -447,7 +455,7 @@ export const useWithdraw = () => {
           message: 'Withdrawal successful',
           category: 'transaction',
           data: {
-            transactionHash: res.transaction_hash,
+            transactionHash: txHash,
             blockNumber: blockNumber?.toString(),
             value: withdrawnValue.toString(),
           },
@@ -483,13 +491,19 @@ export const useWithdraw = () => {
       proof,
       withdrawal,
       newSecretKeys,
+      relayersData,
       commitment,
       target,
       accountService,
       selectedPoolInfo,
       setIsClosable,
+      selectedRelayer?.url,
       resetQuote,
-      sendAsync,
+      relayerData,
+      quoteState.quoteCommitment?.signedRelayerCommitment,
+      quoteState.quoteCommitment?.expiration,
+      quoteState.extraGas,
+      amount,
       setTransactionHash,
       setModalOpen,
       addWithdrawal,

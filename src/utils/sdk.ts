@@ -18,12 +18,13 @@ import {
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { Address } from '@starknet-react/chains';
 import { AbiEventName } from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
-import { Call, RpcProvider } from 'starknet';
+import { Call, RpcProvider, validateAndParseAddress } from 'starknet';
 import { Hex } from 'viem';
 import { ChainData, chainData, PoolInfo, whitelistedChains } from '~/config';
 import { PoolAccount, ReviewStatus, WithdrawalRelayerPayload } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
 import { delay } from './promises';
+import { toAddress } from './adresses';
 
 const chainDataByWhitelistedChains = Object.values(chainData).filter(
   (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id.toString() === chain.poolInfo[0].chainId),
@@ -157,7 +158,7 @@ export const relay = async ({
 export const getScope = async (poolInfo: PoolInfo) => {
   const sdk = initializeSDK();
   const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, snRpcProvider as never);
-  return (await contract.getScope(poolInfo.address)) as Hash;
+  return toAddress(await contract.getScope(poolInfo.address));
 };
 
 export const getDeposits = async (poolInfo: PoolInfo) => {

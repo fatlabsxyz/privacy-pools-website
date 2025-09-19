@@ -201,7 +201,7 @@ export const WithdrawForm = () => {
 
     setIsLoadingMinAmount(true);
     try {
-      const response = await relayerClient.fetchFees(selectedRelayer.url, chainId, selectedPoolInfo.assetAddress);
+      const response = await relayerClient.fetchFees(selectedRelayer.url, selectedPoolInfo.assetAddress);
 
       const minAmount = BigInt(response.minWithdrawAmount);
       setMinWithdrawAmount(minAmount);

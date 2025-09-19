@@ -118,12 +118,12 @@ export const ChainProvider = ({ children }: Props) => {
 
   const feesQueries = useQueries({
     queries: chain.relayers.map((relayer) => ({
-      queryKey: ['relayerFees', relayer.url, chainId, selectedPoolInfo?.assetAddress],
+      queryKey: ['fetchFees', relayer.url, selectedPoolInfo.assetAddress],
       queryFn: () => {
         if (!selectedPoolInfo?.assetAddress) {
           return Promise.reject(new Error('Asset address not found for the selected pool'));
         }
-        return relayerClient.fetchFees(relayer.url, chainId, selectedPoolInfo.assetAddress);
+        return relayerClient.fetchFees(relayer.url, selectedPoolInfo.assetAddress);
       },
       enabled: !!selectedPoolInfo?.assetAddress,
     })),

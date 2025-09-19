@@ -14,7 +14,7 @@ const generateId = () => Math.random().toString(36).substring(2, 15);
 const waitForMessage = <T extends WorkerMessages, MessageType extends T['type']>(
   worker: Worker,
   messageType: MessageType,
-  timeout = 10000,
+  timeout = 30000,
 ) =>
   new Promise<T & { type: MessageType }>((resolve, reject) => {
     const removeListener = () => worker.removeEventListener('message', resolveCallback);
