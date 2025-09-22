@@ -1,4 +1,4 @@
-import { StarknetWithdrawal, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { StarknetAddress, StarknetWithdrawal, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { Address } from '@starknet-react/chains';
 import { BigNumberish } from 'starknet';
 
@@ -54,7 +54,7 @@ interface SignedFeeCommitment extends SNFeeCommitment {
 
 export interface SNRelayRequestBody extends WithdrawalProof {
   readonly withdrawal: StarknetWithdrawal;
-  readonly scope: bigint;
+  readonly scope: StarknetAddress;
   readonly feeCommitment?: SignedFeeCommitment;
 }
 
@@ -72,7 +72,7 @@ export type FeesResponse = {
  * Represents the response from a relayer operation.
  */
 export interface RelayerResponse {
-  transaction_hash(arg0: string, transaction_hash: any, arg2: never): unknown;
+  transaction_hash(arg0: string, transaction_hash: string, arg2: never): unknown;
   /** Indicates if the request was successful */
   success: boolean;
   /** Timestamp of the response */

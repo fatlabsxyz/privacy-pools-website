@@ -15,16 +15,16 @@ import {
   PrivacyPoolStarknetSDK,
   getCommitment,
   computeContext,
+  toAddress,
+  StarknetAddress,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
-import { Address } from '@starknet-react/chains';
 import { AbiEventName } from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
-import { Call, RpcProvider, validateAndParseAddress } from 'starknet';
+import { Call, RpcProvider } from 'starknet';
 import { Hex } from 'viem';
 import { ChainData, chainData, PoolInfo, whitelistedChains } from '~/config';
 import { PoolAccount, ReviewStatus, WithdrawalRelayerPayload } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
 import { delay } from './promises';
-import { toAddress } from './adresses';
 
 const chainDataByWhitelistedChains = Object.values(chainData).filter(
   (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id.toString() === chain.poolInfo[0].chainId),
@@ -39,7 +39,7 @@ let circuits: Circuits | null = null;
 let sdk: PrivacyPoolStarknetSDK | null = null;
 
 interface ISNContractProps {
-  entryPoint: Address;
+  entryPoint: StarknetAddress;
 }
 
 const initializeSDK = () => {
@@ -135,7 +135,7 @@ export const getContext = async (
     processor: string;
     data: string[];
   },
-  scope: Hash,
+  scope: StarknetAddress,
 ) => {
   return computeContext(withdrawal, scope);
 };
@@ -203,8 +203,8 @@ export const deposit = async ({
   precommitment,
 }: {
   amount: bigint;
-  entryPoint: Address;
-  token: Address;
+  entryPoint: StarknetAddress;
+  token: StarknetAddress;
   precommitment: bigint;
 }) => {
   const sdk = initializeSDK();
@@ -236,8 +236,8 @@ export const withdraw = async ({
   scope,
 }: {
   amount: bigint;
-  entryPoint: Address;
-  token: Address;
+  entryPoint: StarknetAddress;
+  token: StarknetAddress;
   precommitment: bigint;
   withdrawalData: WithdrawalRelayerPayload;
   withdrawalProof: bigint[];
@@ -256,7 +256,7 @@ export const rageQuit = async ({
   secret,
   nullifier,
 }: ISNContractProps & {
-  poolAddress: Address;
+  poolAddress: StarknetAddress;
   value: bigint;
   label: bigint;
   secret: Secret;
@@ -272,7 +272,7 @@ export const rageQuit = async ({
 export const addPoolAccount = (
   accountService: AccountService,
   newPoolAccount: {
-    scope: bigint;
+    scope: StarknetAddress;
     value: bigint;
     nullifier: Secret;
     secret: Secret;
@@ -282,7 +282,7 @@ export const addPoolAccount = (
   },
 ) => {
   const accountInfo = accountService.addPoolAccount(
-    newPoolAccount.scope as Hash,
+    newPoolAccount.scope as unknown as Hash,
     newPoolAccount.value,
     newPoolAccount.nullifier,
     newPoolAccount.secret,
@@ -337,6 +337,7 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
   const poolAccounts = [];
 
   for (const [_scope, _poolAccounts] of paMap) {
+    const scope = _scope as unknown as StarknetAddress;
     let idx = 1;
 
     for (const poolAccount of _poolAccounts) {
@@ -344,7 +345,7 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
         poolAccount.children.length > 0 ? poolAccount.children[poolAccount.children.length - 1] : poolAccount.deposit;
 
       const _chainId = Object.keys(chainData).find((key) =>
-        chainData[key].poolInfo.some((pool) => pool.scope === _scope),
+        chainData[key].poolInfo.some((pool) => pool.scope === scope),
       );
 
       const updatedPoolAccount = {
@@ -354,7 +355,7 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
         reviewStatus: ReviewStatus.PENDING,
         isValid: false,
         name: idx,
-        scope: _scope,
+        scope,
         chainId: _chainId!,
       };
 

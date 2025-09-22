@@ -45,7 +45,7 @@ export const prepareWithdrawalProofInput = (
     aspRoot: aspMerkleProof.root as Hash,
     stateTreeDepth: 10n, // Double check
     aspTreeDepth: 10n, // Double check
-    context: context,
+    context,
     newSecret: secret,
     newNullifier: nullifier,
   };

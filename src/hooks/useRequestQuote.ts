@@ -212,7 +212,14 @@ export const useRequestQuote = ({
     }
 
     return stopTimer;
-  }, [quoteState.quoteCommitment?.signedRelayerCommitment, quoteState.isExpired]);
+  }, [
+    quoteState.quoteCommitment?.signedRelayerCommitment,
+    quoteState.isExpired,
+    quoteState.quoteCommitment,
+    quoteState.countdown,
+    stopTimer,
+    startTimer,
+  ]);
 
   const isQuoteValid = useMemo(
     () => quoteState.quoteCommitment !== null && quoteState.countdown > 0 && !quoteState.isExpired,

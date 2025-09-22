@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { generateMerkleProof, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { generateMerkleProof, StarknetAddress, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
 import { parseUnits } from 'viem';
 // import { getConfig } from '~/config';
@@ -12,7 +12,7 @@ import {
   usePoolAccountsContext,
   useChainContext,
 } from '~/hooks';
-import { Hash, ModalType, Secret } from '~/types';
+import { ModalType, Secret } from '~/types';
 import {
   prepareWithdrawRequest,
   getContext,
@@ -210,8 +210,8 @@ export const useWithdraw = () => {
       if (!commitment) missingFields.push('commitment');
       // if (!aspLeaves) missingFields.push('aspLeaves');
       // if (!stateLeaves) missingFields.push('stateLeaves');
-      // if (!relayerDetails) missingFields.push('relayerDetails');
-      // if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
+      if (!relayerDetails) missingFields.push('relayerDetails');
+      if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
       // if (!feeBPSForWithdraw) missingFields.push('feeBPS');
       if (!accountService) missingFields.push('accountService');
 
@@ -257,7 +257,7 @@ export const useWithdraw = () => {
         // throw new Error('ASP leaves not available');
       }
 
-      let poolScope: Hash | bigint | undefined;
+      let poolScope: StarknetAddress | undefined;
       let stateMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
       let aspMerkleProof: Awaited<ReturnType<typeof getMerkleProof>>;
       // let merkleProofGenerated = false;
@@ -274,7 +274,7 @@ export const useWithdraw = () => {
         poolScope = await getScope(selectedPoolInfo);
         stateMerkleProof = generateMerkleProof(sateLeavesToUse, commitment.hash);
         aspMerkleProof = generateMerkleProof(aspLeavesToUse, commitment.label);
-        const context = await getContext(newWithdrawal, poolScope as Hash);
+        const context = await getContext(newWithdrawal, poolScope);
         const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
 
         aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue

@@ -1,19 +1,16 @@
+import { StarknetAddress, toAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import {
   Chain,
   mainnet,
   // sepolia,
-  Address,
   devnet,
 } from '@starknet-react/chains';
-import { validateAndParseAddress } from 'starknet';
 import {
   parseEther,
   // parseUnits
 } from 'viem';
 import { getEnv } from '~/config/env';
 // import daiIcon from '~/assets/icons/dai.svg';
-import { ValidAddress } from '~/types/address';
-import { toAddress } from '~/utils/adresses';
 import mainnetIcon from '~/assets/icons/mainnet_color.svg';
 // import susdsIcon from '~/assets/icons/susds.svg';
 // import usdcIcon from '~/assets/icons/usdc.svg';
@@ -37,11 +34,11 @@ export type ChainAssets = 'ETH' | 'USDS' | 'sUSDS' | 'DAI' | 'USDC' | 'USDT' | '
 
 export interface PoolInfo {
   chainId: string;
-  address: ValidAddress;
-  scope: ValidAddress;
+  address: StarknetAddress;
+  scope: StarknetAddress;
   deploymentBlock: bigint;
-  entryPointAddress: ValidAddress;
-  assetAddress: ValidAddress;
+  entryPointAddress: StarknetAddress;
+  assetAddress: StarknetAddress;
   maxDeposit: bigint;
   asset: ChainAssets;
   assetDecimals?: number;
