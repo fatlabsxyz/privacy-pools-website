@@ -1,22 +1,22 @@
 'use client';
 
 import { useEffect, useMemo, useCallback, useRef } from 'react';
-import { Address } from 'viem';
+import { StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { useQuoteContext } from '~/contexts/QuoteContext';
-import { QuoteRequestBody, QuoteResponse, FeeCommitment } from '~/types';
+import { QuoteRequestBody, FeeCommitment, SNQuoteResponse } from '~/types';
 import { calculateRemainingTime } from '~/utils';
 
 let globalTimerInstanceActive = false;
 
 interface UseRequestQuoteParams {
-  getQuote: (input: QuoteRequestBody) => Promise<QuoteResponse>;
+  getQuote: (input: QuoteRequestBody) => Promise<SNQuoteResponse>;
   isQuoteLoading: boolean;
   quoteError: Error | null;
 
   chainId: string | undefined;
   amountBN: bigint;
-  assetAddress: Address | undefined;
-  recipient: Address | '';
+  assetAddress: StarknetAddress | undefined;
+  recipient: StarknetAddress | '';
 
   isValidAmount: boolean;
   isRecipientAddressValid: boolean;

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useAccount, useSendTransaction } from '@starknet-react/core';
-import { parseUnits, TransactionExecutionError } from 'viem';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
 import { createDepositSecrets } from '~/utils';
+import { parseUnits } from '~/utils/balance';
 import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
 import { useSdk } from './useSdkWorker';
@@ -61,7 +61,7 @@ export const useDeposit = () => {
 
       setTransactionHash(transaction_hash as never);
 
-      const deposits = await waitForEvents('Deposit', transaction_hash, selectedPoolInfo as never, 3000);
+      const deposits = await waitForEvents('Deposit', transaction_hash, selectedPoolInfo, 3);
 
       if (deposits.length === 0) {
         throw new Error('no deposit found');
@@ -90,8 +90,8 @@ export const useDeposit = () => {
         );
       }, 2000);
     } catch (err) {
-      const error = err as TransactionExecutionError;
-      addNotification('error', getDefaultErrorMessage(error?.shortMessage || error?.message));
+      const error = err as Error;
+      addNotification('error', getDefaultErrorMessage(error?.message));
       setModalOpen(ModalType.NONE);
       setIsLoading(false);
       console.error('Error depositing', error);

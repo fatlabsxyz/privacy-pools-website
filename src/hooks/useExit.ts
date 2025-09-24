@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { addBreadcrumb } from '@sentry/nextjs';
 import { useSendTransaction, useAccount } from '@starknet-react/core';
-import { TransactionExecutionError } from 'viem';
 import { useChainContext, useAccountContext, useModal, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType } from '~/types';
 import { waitForEvents } from '~/utils';
@@ -74,7 +73,7 @@ export const useExit = () => {
 
       setModalOpen(ModalType.SUCCESS);
     } catch (err) {
-      const error = err as TransactionExecutionError;
+      const error = err as Error;
       setModalOpen(ModalType.NONE);
 
       // Log error to Sentry with full context
@@ -88,7 +87,7 @@ export const useExit = () => {
       //   has_seed: !!seed,
       // });
 
-      const errorMessage = getDefaultErrorMessage(error?.shortMessage || error?.message);
+      const errorMessage = getDefaultErrorMessage(error?.message);
       addNotification('error', errorMessage);
       console.error('Error calling exit', error);
     }

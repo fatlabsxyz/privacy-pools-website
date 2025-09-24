@@ -1,7 +1,7 @@
 import { Connector } from '@starknet-react/core';
 import { RpcProvider } from 'starknet';
-import { formatUnits, parseUnits } from 'viem';
 import { EventType, ReviewStatus, StatusObject } from '~/types';
+import { formatUnits, parseUnits } from './balance';
 
 export const getUsdBalance = (price: number | null, balance: string, decimals: number): string => {
   if (!price || !balance || !decimals) return '0';

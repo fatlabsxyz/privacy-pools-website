@@ -1,4 +1,4 @@
-import { parseEther } from 'viem';
+import { parseEther } from './balance';
 
 export const calculateInitialDeposit = (inputAmount: bigint, feeBps: bigint) => {
   // Calculate initial deposit amount accounting for fee percentage

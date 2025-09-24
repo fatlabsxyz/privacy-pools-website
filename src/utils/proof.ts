@@ -5,7 +5,12 @@ import { PoolInfo } from '~/config';
 import { Secret, WithdrawalProofInput, Hash } from '~/types';
 import { getMerkleProof } from '~/utils';
 
-export const prepareWithdrawRequest = (recipient: Address, relayer: Address, feeBPS: string, poolInfo: PoolInfo) => {
+export const prepareWithdrawRequest = (
+  recipient: Address,
+  relayer: Address,
+  feeBPS: string,
+  poolInfo: Pick<PoolInfo, 'entryPointAddress'>,
+) => {
   const validatedRecipient = validateAndParseAddress(recipient);
 
   return {

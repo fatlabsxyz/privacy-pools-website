@@ -48,7 +48,7 @@ interface SNFeeCommitment {
   extraGas: boolean;
 }
 
-interface SignedFeeCommitment extends SNFeeCommitment {
+export interface SignedFeeCommitment extends SNFeeCommitment {
   signedRelayerCommitment: string;
 }
 
@@ -152,4 +152,8 @@ export type QuoteResponse = {
   feeCommitment: FeeCommitment;
   /** Detailed breakdown of costs and gas amounts. */
   detail: QuoteDetailBreakdown;
+};
+
+export type SNQuoteResponse = Omit<QuoteResponse, 'feeCommitment'> & {
+  feeCommitment: SignedFeeCommitment;
 };

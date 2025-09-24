@@ -10,17 +10,16 @@ import {
   AccountService,
   PrivacyPoolAccount,
   AccountCommitment,
-  // ChainConfig,
   StarknetDataService,
   PrivacyPoolStarknetSDK,
   getCommitment,
   computeContext,
   toAddress,
   StarknetAddress,
+  Address,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { AbiEventName } from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
 import { Call, RpcProvider } from 'starknet';
-import { Hex } from 'viem';
 import { ChainData, chainData, PoolInfo, whitelistedChains } from '~/config';
 import { PoolAccount, ReviewStatus, WithdrawalRelayerPayload } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
@@ -55,17 +54,8 @@ const initializeSDK = () => {
   return sdk!;
 };
 
-const pools: (PoolInfo & { chainId: number; scope: Hash })[] = poolsByChain as never;
+const pools: (PoolInfo & { scope: Hash })[] = poolsByChain as never;
 
-// const dataServiceConfig: ChainConfig[] = poolsByChain.map((pool) => {
-//   return {
-//     chainId: pool.chainId as never,
-//     privacyPoolAddress: pool.address,
-//     startBlock: pool.deploymentBlock,
-//     rpcUrl: chainData[pool.chainId].sdkRpcUrl,
-//     apiKey: 'sdk', // It's not an api key https://viem.sh/docs/clients/public#key-optional
-//   };
-// });
 const chain = chainDataByWhitelistedChains[0];
 export const snRpcProvider = new RpcProvider({
   nodeUrl: chain.rpcUrl,
@@ -184,7 +174,7 @@ export const createAccount = (seed: string) => {
 export const loadAccount = async (seed: string) => {
   // const { account } = await AccountService.initializeWithEvents(dataService as never, { mnemonic: seed }, pools);
   const account = new AccountService(dataService as never, { mnemonic: seed });
-  await account.retrieveHistory(pools);
+  await account.retrieveHistory(pools as (PoolInfo & { chainId: number; scope: bigint })[]);
   return account;
 };
 
@@ -216,10 +206,20 @@ export const deposit = async ({
 export const waitForEvents = async <T extends keyof typeof AbiEventName>(
   event: T,
   txHash: string,
-  poolInfo: (typeof pools)[number],
+  poolInfo: PoolInfo,
   maxRetries = 3,
 ) => {
-  const getTx = () => dataService.getTxEvents(AbiEventName[event], txHash, poolInfo);
+  const getTx = async () => {
+    const txEvents = await dataService.getTxEvents(
+      AbiEventName[event],
+      txHash,
+      poolInfo as PoolInfo & { chainId: number; scope: bigint },
+    );
+    if (txEvents.length === 0) {
+      throw new Error(`Transaction for hash "${txHash}" not found in pool address "${poolInfo.address}".`);
+    }
+    return txEvents;
+  };
   let retry = 0;
   let retryTime = 1000;
   let tx: Awaited<ReturnType<typeof getTx>> & { blockNumber: bigint }[] = [];
@@ -278,7 +278,7 @@ export const addPoolAccount = (
     secret: Secret;
     label: Hash;
     blockNumber: bigint;
-    txHash: Hex;
+    txHash: Address;
   },
 ) => {
   const accountInfo = accountService.addPoolAccount(
@@ -302,7 +302,7 @@ export const addWithdrawal = async (
     nullifier: Secret;
     secret: Secret;
     blockNumber: bigint;
-    txHash: Hex;
+    txHash: Address;
   },
 ) => {
   return accountService.addWithdrawalCommitment(
@@ -325,7 +325,7 @@ export const addRagequit = async (
       label: Hash;
       value: bigint;
       blockNumber: bigint;
-      transactionHash: Hex;
+      transactionHash: Address;
     };
   },
 ) => {

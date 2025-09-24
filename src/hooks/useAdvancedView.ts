@@ -3,10 +3,10 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { formatUnits } from 'viem';
 import { getConfig } from '~/config';
 import { useChainContext, useExternalServices, useAccountContext } from '~/hooks';
 import { aspClient } from '~/utils';
+import { formatUnits } from '~/utils/balance';
 
 const {
   constants: { ITEMS_PER_PAGE },

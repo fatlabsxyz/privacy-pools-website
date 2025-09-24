@@ -1,6 +1,7 @@
 import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {},
   webpack: (config) => {
     config.resolve.fallback = {
       fs: false,

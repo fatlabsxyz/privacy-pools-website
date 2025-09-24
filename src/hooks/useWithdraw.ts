@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { generateMerkleProof, StarknetAddress, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
-import { parseUnits } from 'viem';
 // import { getConfig } from '~/config';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -25,6 +24,7 @@ import {
   getDeposits,
 } from '~/utils';
 import { useSdk } from './useSdkWorker';
+import { parseUnits } from '~/utils/balance';
 
 const PRIVACY_POOL_ERRORS = {
   'Error: InvalidProof()': 'Failed to verify withdrawal proof. Please regenerate your proof and try again.',
@@ -54,7 +54,6 @@ export const useWithdraw = () => {
   const { resetQuote, quoteState } = useQuoteContext();
   const {
     selectedPoolInfo,
-    // chainId,
     balanceBN: { decimals },
     relayersData,
     selectedRelayer,
@@ -73,7 +72,6 @@ export const useWithdraw = () => {
     newSecretKeys,
     setNewSecretKeys,
     setTransactionHash,
-    // feeCommitment,
     feeBPSForWithdraw,
   } = usePoolAccountsContext();
 
@@ -368,7 +366,6 @@ export const useWithdraw = () => {
         !target ||
         !relayerDetails ||
         !relayerDetails.relayerAddress ||
-        // !feeCommitment ||
         !currentNewSecretKeys ||
         !accountService
       )
@@ -383,32 +380,8 @@ export const useWithdraw = () => {
         // Reset the quote timer when transaction starts
         resetQuote();
 
-        // const relayCall = await relay({
-        //   poolInfo: selectedPoolInfo,
-        //   proof: currentProof.calldata,
-        //   withdraw: currentWithdrawal,
-        // });
-
-        // const res = await sendAsync([relayCall]);
-
-        // const res = await relayerData.relay({
-        //   withdrawal: currentWithdrawal as WithdrawalRelayerPayload,
-        //   proof: (currentProof as { proof: unknown }).proof as ProofRelayerPayload,
-        //   publicSignals: (currentProof as { publicSignals: unknown }).publicSignals as string[],
-        //   scope: poolScope.toString(),
-        //   chainId,
-        //   feeCommitment,
-        // });
-
         const res = await relayerData.relay({
-          feeCommitment: {
-            signedRelayerCommitment: quoteState.quoteCommitment?.signedRelayerCommitment as string,
-            withdrawalData: currentWithdrawal.data,
-            asset: selectedPoolInfo.assetAddress,
-            expiration: quoteState.quoteCommitment?.expiration || 0,
-            amount: BigInt(amount),
-            extraGas: quoteState.extraGas,
-          },
+          feeCommitment: quoteState.quoteCommitment!,
           scope,
           withdrawal: currentWithdrawal,
           ...currentProof.withdrawalProof,
@@ -419,24 +392,6 @@ export const useWithdraw = () => {
         const receipts = await waitForEvents('Withdraw', txHash, selectedPoolInfo as never);
         if (!receipts.length) throw new Error('Receipt not found');
         const [{ withdrawnValue, blockNumber }] = receipts;
-
-        // if (!res.success) {
-        //   // Check if the error is a known privacy pool error
-        //   const privacyPoolError = getPrivacyPoolErrorMessage(res.error || '');
-        //   const errorMessage = privacyPoolError || res.error || 'Relay failed';
-
-        //   // Log relayer error to Sentry
-        //   logErrorToSentry(new Error(errorMessage), {
-        //     operation_step: 'relayer_execution',
-        //     relayer_error: res.error,
-        //     relayer_success: res.success,
-        //     scope: poolScope.toString(),
-        //   });
-
-        //   throw new Error(errorMessage);
-        // }
-
-        // if (!res.txHash) throw new Error('Relay response does not have tx hash');
 
         setTransactionHash(txHash);
         setModalOpen(ModalType.PROCESSING);
@@ -480,6 +435,7 @@ export const useWithdraw = () => {
         // Try to get a user-friendly error message
         const privacyPoolError = getPrivacyPoolErrorMessage(error?.message || '');
         const errorMessage = privacyPoolError || getDefaultErrorMessage(error?.message);
+        setModalOpen(ModalType.NONE);
 
         addNotification('error', errorMessage);
         console.error('Error withdrawing', error);
@@ -500,10 +456,7 @@ export const useWithdraw = () => {
       selectedRelayer?.url,
       resetQuote,
       relayerData,
-      quoteState.quoteCommitment?.signedRelayerCommitment,
-      quoteState.quoteCommitment?.expiration,
-      quoteState.extraGas,
-      amount,
+      quoteState.quoteCommitment,
       setTransactionHash,
       setModalOpen,
       addWithdrawal,
