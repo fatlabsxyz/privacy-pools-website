@@ -18,6 +18,7 @@ export const getServerEnv = () => {
   return {
     ASP_API_JWT: process.env.ASP_API_JWT as string,
     HYPERSYNC_KEY: process.env.HYPERSYNC_KEY as string,
+    ALCHEMY_KEY: process.env.NEXT_PUBLIC_ALCHEMY_KEY,
   };
 };
 

@@ -1,6 +1,11 @@
 'use client';
 
-import { useState, MouseEvent, useEffect, useMemo } from 'react';
+import {
+  useState,
+  MouseEvent,
+  useEffect,
+  // useMemo
+} from 'react';
 import { OverflowMenuVertical } from '@carbon/icons-react';
 import {
   styled,
@@ -16,16 +21,29 @@ import {
   Typography,
   Box,
 } from '@mui/material';
+import { useAccount } from '@starknet-react/core';
 import { formatUnits } from 'viem';
-import { useAccount } from 'wagmi';
-import { DottedMenu, ExtendedTooltip as Tooltip, StatusChip } from '~/components';
-import { getConstants } from '~/config/constants';
+import {
+  DottedMenu,
+  ExtendedTooltip as Tooltip,
+  // StatusChip
+} from '~/components';
+// import { getConstants } from '~/config/constants';
 import { usePoolAccountsContext, useModal, useChainContext, useAccountContext } from '~/hooks';
-import { EventType, ModalType, PoolAccount, ReviewStatus } from '~/types';
-import { formatDataNumber, formatTimestamp, getStatus } from '~/utils';
+import {
+  EventType,
+  ModalType,
+  PoolAccount,
+  // ReviewStatus
+} from '~/types';
+import {
+  formatDataNumber,
+  formatTimestamp,
+  // getStatus
+} from '~/utils';
 
 export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
-  const { PENDING_STATUS_MESSAGE: statusMessage } = getConstants();
+  // const { PENDING_STATUS_MESSAGE: statusMessage } = getConstants();
   const { setActionType, setPoolAccount, setAmount, setTarget } = usePoolAccountsContext();
   const {
     balanceBN: { symbol, decimals },
@@ -97,20 +115,20 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
     setAnchorEl(Array(poolAccounts.length).fill(null));
   };
 
-  const getRowReviewStatus = useMemo(
-    () => (row: PoolAccount) => {
-      const reviewStatus = getStatus(row);
-      return reviewStatus === ReviewStatus.APPROVED && row.balance === 0n ? ReviewStatus.SPENT : reviewStatus;
-    },
-    [],
-  );
+  // const getRowReviewStatus = useMemo(
+  //   () => (row: PoolAccount) => {
+  //     const reviewStatus = getStatus(row);
+  //     return reviewStatus === ReviewStatus.APPROVED && row.balance === 0n ? ReviewStatus.SPENT : reviewStatus;
+  //   },
+  //   [],
+  // );
 
   const getExitHandler = (row: PoolAccount) => {
     return row.balance !== 0n ? () => handleExit(row) : undefined;
   };
 
   const getWithdrawHandler = (row: PoolAccount) => {
-    return row.balance !== 0n && row.reviewStatus === ReviewStatus.APPROVED ? () => handleWithdraw(row) : undefined;
+    return row.balance !== 0n ? () => handleWithdraw(row) : undefined;
   };
 
   if (isLoading) {
@@ -135,7 +153,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
                 <HTableCell sx={{ paddingLeft: 0 }}>Account</HTableCell>
                 <HTableCell>Value</HTableCell>
                 <HTableCell>Created</HTableCell>
-                <HTableCell sx={{ paddingRight: 0 }}>Status</HTableCell>
+                {/* <HTableCell sx={{ paddingRight: 0 }}>Status</HTableCell> */}
                 <HTableCell align='right'></HTableCell>
               </TableRow>
             </TableHead>
@@ -157,7 +175,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
                       ? formatTimestamp(row.deposit.timestamp?.toString() ?? '').slice(0, 10)
                       : formatTimestamp(row.deposit.timestamp?.toString() ?? '')}
                   </STableCell>
-
+                  {/* 
                   <STableCell sx={{ paddingRight: mobile ? 0 : '1rem', textAlign: 'left' }}>
                     <Tooltip
                       title={getRowReviewStatus(row) === ReviewStatus.PENDING ? statusMessage : ''}
@@ -166,7 +184,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
                     >
                       <StatusChip status={getRowReviewStatus(row)} compact={mobile} />
                     </Tooltip>
-                  </STableCell>
+                  </STableCell> */}
 
                   <MenuCell align='right' onClick={(e) => handleToggle(e, row.name - 1)} data-testid='dotted-menu'>
                     <SIconButton>

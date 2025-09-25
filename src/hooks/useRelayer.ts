@@ -3,15 +3,17 @@
 import { useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useChainContext } from '~/hooks';
-import { QuoteRequestBody, QuoteResponse, RelayRequestBody, RelayerResponse } from '~/types';
+import { QuoteRequestBody, QuoteResponse, RelayerResponse, SNRelayRequestBody } from '~/types';
 import { relayerClient } from '~/utils';
+
+export class RelayerError extends Error {}
 
 export type UseRelayerReturn = {
   getQuote: (input: QuoteRequestBody) => Promise<QuoteResponse>;
   quoteData: QuoteResponse | undefined;
   isQuoteLoading: boolean;
   quoteError: Error | null;
-  relay: (input: RelayRequestBody) => Promise<RelayerResponse>;
+  relay: (input: SNRelayRequestBody) => Promise<RelayerResponse>;
 };
 
 export const useRelayer = (): UseRelayerReturn => {
@@ -28,11 +30,15 @@ export const useRelayer = (): UseRelayerReturn => {
   });
 
   const relay = useCallback(
-    async (input: RelayRequestBody) => {
+    async (input: SNRelayRequestBody) => {
       if (!relayerUrl) {
         throw new Error('No relayer URL selected for relay');
       }
-      return relayerClient.relay(relayerUrl, input);
+      const relayerResponse = await relayerClient.relay(relayerUrl, input);
+      if (!relayerResponse.success) {
+        throw new RelayerError(relayerResponse.error);
+      }
+      return relayerResponse;
     },
     [relayerUrl],
   );

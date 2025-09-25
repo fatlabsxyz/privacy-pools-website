@@ -1,4 +1,3 @@
-import { Log } from 'viem';
 export interface MerkleProof {
   root: bigint;
   siblings: bigint[];
@@ -13,10 +12,3 @@ export interface RagequitProof {
   };
   publicSignals: [bigint, bigint, bigint, bigint, bigint];
 }
-
-export type LeafInsertedLog = Log & {
-  args: {
-    _index: bigint;
-    _leaf: bigint;
-  };
-};

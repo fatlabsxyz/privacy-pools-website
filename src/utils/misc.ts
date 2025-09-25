@@ -1,6 +1,7 @@
-import { formatUnits, parseUnits, PublicClient } from 'viem';
-import { CreateConnectorFn, Connector } from 'wagmi';
+import { Connector } from '@starknet-react/core';
+import { RpcProvider } from 'starknet';
 import { EventType, ReviewStatus, StatusObject } from '~/types';
+import { formatUnits, parseUnits } from './balance';
 
 export const getUsdBalance = (price: number | null, balance: string, decimals: number): string => {
   if (!price || !balance || !decimals) return '0';
@@ -75,19 +76,17 @@ export const formatSmallNumber = (value: number, currency?: boolean, significant
   return currency ? `$${trimmedResult}` : trimmedResult;
 };
 
-export const getTimestampFromBlockNumber = async (blockNumber: bigint, publicClient: PublicClient) => {
-  if (!publicClient) throw new Error('Public client not found');
+export const getTimestampFromBlockNumber = async (blockNumber: bigint, provider: RpcProvider) => {
+  if (!provider) throw new Error('Public client not found');
 
-  const block = await publicClient.getBlock({
-    blockNumber,
-  });
+  const block = await provider.getBlock(blockNumber.toString());
 
   if (!block) throw new Error('Block required to get timestamp');
 
-  return block.timestamp;
+  return BigInt(block.timestamp);
 };
 
-export const getUniqueConnectors = (connectors: readonly Connector<CreateConnectorFn>[]) => {
+export const getUniqueConnectors = (connectors: readonly Connector[]) => {
   const seen = new Set<string>();
   return connectors.filter((connector) => {
     const name = (connector as { rkDetails?: { name?: string } })?.rkDetails?.name || connector.name;

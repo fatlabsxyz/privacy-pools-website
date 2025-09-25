@@ -3,19 +3,19 @@
 import { MouseEvent, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ListItemIcon, Menu as MuiMenu, MenuItem, styled, IconButton } from '@mui/material';
-import { Chain } from 'viem';
-import { useChains } from 'wagmi';
+import { Chain } from '@starknet-react/chains';
+import { useNetwork } from '@starknet-react/core';
 import { chainData, whitelistedChains } from '~/config';
 import { useChainContext } from '~/hooks';
 import { zIndex } from '~/utils';
 
 export const ChainSelect = () => {
-  const chains = useChains();
+  const { chains } = useNetwork();
   const { chainId, setChainId } = useChainContext();
 
   // Only show chains that are whitelisted and have chainData
   const availableChains = chains.filter(
-    (chain) => whitelistedChains.some((wc) => wc.id === chain.id) && chainData[chain.id],
+    (chain) => whitelistedChains.some((wc) => wc.id === chain.id) && chainData[chain.id.toString()],
   );
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -37,7 +37,7 @@ export const ChainSelect = () => {
     }, 0);
   };
 
-  const handleChainChange = async (chainId: number) => {
+  const handleChainChange = async (chainId: string) => {
     setChainId(chainId);
     handleClose();
   };
@@ -58,9 +58,9 @@ export const ChainSelect = () => {
         elevation={0}
       >
         {availableChains.map((chain: Chain) => (
-          <SMenuItem key={chain.id} onClick={() => handleChainChange(chain.id)}>
+          <SMenuItem key={chain.id} onClick={() => handleChainChange(chain.id.toString())}>
             <ListItemIcon>
-              <Image src={chainData[chain.id].image} alt={chain.name} width={16} height={16} />
+              <Image src={chainData[chain.id.toString()].image} alt={chain.name} width={16} height={16} />
             </ListItemIcon>
             {chain.name}
           </SMenuItem>

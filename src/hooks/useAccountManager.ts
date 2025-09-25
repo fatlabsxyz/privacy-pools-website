@@ -9,7 +9,7 @@ export function useAccountManager(
   setPoolAccounts: (poolAccounts: PoolAccount[]) => void,
   setPoolAccountsByChainScope: (poolAccountsByChainScope: Record<string, PoolAccount[]>) => void,
   accountServiceRef: RefObject<AccountService | null>,
-  chainId: number,
+  chainId: string,
 ) {
   const createAccount = useCallback(
     (_seed: string) => {

@@ -1,37 +1,30 @@
-import { FeesResponse, RelayRequestBody, RelayerResponse, QuoteRequestBody, QuoteResponse } from '~/types';
+import { FeesResponse, RelayerResponse, QuoteRequestBody, QuoteResponse, SNRelayRequestBody } from '~/types';
 
 interface FetchClient {
-  fetchFees: (relayerUrl: string, chainId: number, assetAddress: string) => Promise<FeesResponse>;
-  relay: (relayerUrl: string, input: RelayRequestBody) => Promise<RelayerResponse>;
+  fetchFees: (relayerUrl: string, assetAddress: string) => Promise<FeesResponse>;
+  relay: (relayerUrl: string, input: SNRelayRequestBody) => Promise<RelayerResponse>;
   fetchQuote: (relayerUrl: string, input: QuoteRequestBody) => Promise<QuoteResponse>;
+  ping: (relayerUrl: string) => Promise<null>;
 }
 
 const fetchClient: FetchClient = {
-  fetchFees: async (relayerUrl: string, chainId: number, assetAddress: string) => {
-    const response = await fetch(`${relayerUrl}/relayer/details?chainId=${chainId}&assetAddress=${assetAddress}`);
+  // fetchFees: async (relayerUrl: string, chainId: string, assetAddress: string) => {
+  //   const response = await fetch(`${relayerUrl}/relayer/details?chainId=${chainId}&assetAddress=${assetAddress}`);
+  //   const data = await response.json();
+  //   return data;
+  // },
+  fetchFees: async (relayerUrl: string, assetAddress: string) => {
+    const response = await fetch(`${relayerUrl}/details?assetAddress=${assetAddress}`);
     const data = await response.json();
     return data;
   },
-  relay: async (
-    relayerUrl: string,
-    { withdrawal, proof, publicSignals, scope, chainId, feeCommitment }: RelayRequestBody,
-  ) => {
-    const response = await fetch(`${relayerUrl}/relayer/request`, {
+  relay: async (relayerUrl: string, payload: SNRelayRequestBody) => {
+    const response = await fetch(`${relayerUrl}/relay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(
-        {
-          withdrawal,
-          proof,
-          publicSignals,
-          scope,
-          chainId,
-          feeCommitment,
-        },
-        (_key, value) => (typeof value === 'bigint' ? value.toString() : value),
-      ),
+      body: JSON.stringify(payload, (_key, value) => (typeof value === 'bigint' ? value.toString() : value)),
     });
 
     if (!response.ok) {
@@ -42,15 +35,14 @@ const fetchClient: FetchClient = {
     const data = await response.json();
     return data;
   },
-  fetchQuote: async (relayerUrl: string, { chainId, amount, asset, recipient, extraGas }: QuoteRequestBody) => {
-    const response = await fetch(`${relayerUrl}/relayer/quote`, {
+  fetchQuote: async (relayerUrl: string, { amount, asset, recipient, extraGas }: QuoteRequestBody) => {
+    const response = await fetch(`${relayerUrl}/quote`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(
         {
-          chainId,
           amount,
           asset,
           recipient,
@@ -67,6 +59,15 @@ const fetchClient: FetchClient = {
 
     const data = await response.json();
     return data;
+  },
+  ping: async (relayerUrl) => {
+    const response = await fetch(`${relayerUrl}/ping`, {
+      method: 'GET',
+    });
+    if (!response.ok) {
+      throw new Error('Relayer offline');
+    }
+    return null;
   },
 };
 

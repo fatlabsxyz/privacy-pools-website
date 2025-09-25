@@ -1,7 +1,7 @@
 import { Exit, PiggyBank, WatsonHealthRotate_360 } from '@carbon/icons-react';
 import { Button, Stack, styled } from '@mui/material';
+import { useAccount } from '@starknet-react/core';
 import { formatUnits } from 'viem';
-import { useAccount } from 'wagmi';
 import { useModal, usePoolAccountsContext, useChainContext } from '~/hooks';
 import { EventType, ModalType, ReviewStatus } from '~/types';
 

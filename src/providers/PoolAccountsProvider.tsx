@@ -2,7 +2,8 @@
 
 import { createContext, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Address, createPublicClient, getAddress, Hex, http } from 'viem';
+import { Uint256 } from 'starknet';
+import { Address, createPublicClient, getAddress, http } from 'viem';
 import { whitelistedChains } from '~/config';
 import { useChainContext } from '~/hooks';
 import {
@@ -12,10 +13,14 @@ import {
   HistoryData,
   PoolAccount,
   RagequitProof,
-  Withdrawal,
   WithdrawalProof,
+  WithdrawalRelayerPayload,
 } from '~/types';
 import { assetConfig } from '~/utils';
+
+type Withdraw = Omit<WithdrawalRelayerPayload, 'data'> & {
+  data: string[];
+};
 
 type ContextType = {
   vettingFeeBPS: bigint;
@@ -37,12 +42,12 @@ type ContextType = {
   // Transaction
   proof: WithdrawalProof | RagequitProof | CommitmentProof | null;
   setProof: (val: WithdrawalProof | RagequitProof | CommitmentProof) => void;
-  withdrawal: Withdrawal | null;
-  setWithdrawal: (val: Withdrawal) => void;
+  withdrawal: Withdraw | null;
+  setWithdrawal: (val: Withdraw) => void;
   newSecretKeys: { secret: bigint; nullifier: bigint } | null;
   setNewSecretKeys: (val: { secret: bigint; nullifier: bigint }) => void;
-  transactionHash: Hex | undefined;
-  setTransactionHash: (val: Hex) => void;
+  transactionHash: Address | undefined;
+  setTransactionHash: (val: Address) => void;
   actionType: EventType | undefined;
   setActionType: (val?: EventType) => void;
   feeCommitment: FeeCommitment | null;
@@ -59,6 +64,8 @@ interface Props {
 
 export const PoolAccountsContext = createContext({} as ContextType);
 
+export type TxHash = number | bigint | Uint256;
+
 export const PoolAccountsProvider = ({ children }: Props) => {
   const {
     chainId,
@@ -67,14 +74,14 @@ export const PoolAccountsProvider = ({ children }: Props) => {
   } = useChainContext();
 
   const [actionType, setActionType] = useState<EventType>();
-  const [transactionHash, setTransactionHash] = useState<Hex>();
+  const [transactionHash, setTransactionHash] = useState<Address>();
 
   const [amount, setAmount] = useState<string>('');
   const [target, setTarget] = useState<Address | ''>('');
   const [poolAccount, setPoolAccount] = useState<PoolAccount>();
 
   const [proof, setProof] = useState<ContextType['proof']>(null);
-  const [withdrawal, setWithdrawal] = useState<Withdrawal | null>(null);
+  const [withdrawal, setWithdrawal] = useState<Withdraw | null>(null);
   const [newSecretKeys, setNewSecretKeys] = useState<{ secret: bigint; nullifier: bigint } | null>(null);
   const [feeCommitment, setFeeCommitment] = useState<FeeCommitment | null>(null);
   const [feeBPSForWithdraw, setFeeBPSForWithdraw] = useState<bigint>(BigInt(0));
@@ -109,7 +116,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
     enabled: !!selectedPoolInfo,
     queryFn: async () => {
       const publicClient = createPublicClient({
-        chain: whitelistedChains.find((chain) => chain.id === chainId),
+        chain: whitelistedChains.find((chain) => chain.id.toString() === chainId) as never,
         transport: http(rpcUrl),
       });
 

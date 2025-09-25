@@ -1,6 +1,3 @@
-import { captureException, withScope } from '@sentry/nextjs';
-import { decodeEventLog, parseAbiItem, TransactionReceipt } from 'viem';
-
 export const truncateAddress = (address?: string) => {
   if (!address) return '';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -64,43 +61,4 @@ export const getTimeAgo = (timestamp?: string): string => {
   }
   const years = Math.floor(diff / 31536000);
   return `${years} ${years === 1 ? 'year' : 'years'} ago`;
-};
-
-export const decodeEventsFromReceipt = (receipt: TransactionReceipt, eventAbi: string) => {
-  const parsedAbiItem = parseAbiItem(eventAbi);
-
-  return receipt.logs
-    .map((log) => {
-      try {
-        const decodedLog = decodeEventLog({
-          abi: [parsedAbiItem],
-          data: log.data,
-          topics: log.topics,
-        });
-
-        return {
-          eventName: decodedLog.eventName,
-          args: decodedLog.args,
-        };
-      } catch (error) {
-        // Log decode errors to Sentry for debugging
-        withScope((scope) => {
-          scope.setTag('function', 'decodeEventsFromReceipt');
-          scope.setTag('event_abi', parsedAbiItem.type === 'event' ? parsedAbiItem.name : 'unknown');
-          scope.setContext('log_data', {
-            topics: log.topics,
-            data: log.data,
-            address: log.address,
-          });
-          scope.setContext('transaction', {
-            hash: receipt.transactionHash,
-            blockNumber: receipt.blockNumber,
-            status: receipt.status,
-          });
-          captureException(error);
-        });
-        return null;
-      }
-    })
-    .filter((event): event is { eventName: string; args: Record<string, unknown> } => event !== null); // Remove nulls
 };

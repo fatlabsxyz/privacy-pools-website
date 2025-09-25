@@ -8,8 +8,8 @@ import { ModalProvider } from './ModalProvider';
 import { NotificationProvider } from './NotificationProvider';
 import { PoolAccountsProvider } from './PoolAccountsProvider';
 import { SafeProviderWrapper } from './SafeProvider';
+import { StarknetProvider } from './StarknetProvider';
 import { ThemeProvider } from './ThemeProvider';
-import { WalletProvider } from './WalletProvider';
 
 type Props = {
   children: ReactNode;
@@ -21,7 +21,7 @@ export const Providers = ({ children }: Props) => {
       <ThemeProvider>
         <NotificationProvider>
           <CircuitProvider>
-            <WalletProvider>
+            <StarknetProvider>
               <ChainProvider>
                 <PoolAccountsProvider>
                   <AccountProvider>
@@ -33,7 +33,7 @@ export const Providers = ({ children }: Props) => {
                   </AccountProvider>
                 </PoolAccountsProvider>
               </ChainProvider>
-            </WalletProvider>
+            </StarknetProvider>
           </CircuitProvider>
         </NotificationProvider>
       </ThemeProvider>

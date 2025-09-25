@@ -12,4 +12,4 @@ export type {
   Withdrawal,
   WithdrawalProof,
   WithdrawalProofInput,
-} from '@0xbow/privacy-pools-core-sdk';
+} from '@fatsolutions/privacy-pools-core-starknet-sdk';
