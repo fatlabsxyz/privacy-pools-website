@@ -5,9 +5,9 @@ import {
   // sepolia,
   devnet,
 } from '@starknet-react/chains';
+import { parseEther } from 'viem/utils';
 import { getEnv } from '~/config/env';
 // import daiIcon from '~/assets/icons/dai.svg';
-import { parseEther } from '~/utils/balance';
 import mainnetIcon from '~/assets/icons/mainnet_color.svg';
 const { ALCHEMY_KEY, IS_TESTNET, ASP_ENDPOINT } = getEnv();
 

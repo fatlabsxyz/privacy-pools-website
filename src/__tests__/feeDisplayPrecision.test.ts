@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { parseUnits } from '~/utils/balance';
+import { parseUnits } from 'viem/utils';
 
 // Test utility functions that match the ones in the components
 const getMaxDisplayPrecision = (isStableAsset: boolean): number => {

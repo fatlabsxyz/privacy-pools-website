@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { generateMerkleProof, StarknetAddress, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
 // import { getConfig } from '~/config';
+import { parseUnits } from 'viem/utils';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
   useExternalServices,
@@ -23,7 +24,6 @@ import {
   getScope,
   getDeposits,
 } from '~/utils';
-import { parseUnits } from '~/utils/balance';
 import { useSdk } from './useSdkWorker';
 
 const PRIVACY_POOL_ERRORS = {

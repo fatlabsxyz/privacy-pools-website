@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useAccount, useSendTransaction } from '@starknet-react/core';
+import { parseUnits } from 'viem/utils';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
 import { createDepositSecrets } from '~/utils';
-import { parseUnits } from '~/utils/balance';
 import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
 import { useSdk } from './useSdkWorker';
