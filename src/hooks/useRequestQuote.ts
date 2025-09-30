@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { useQuoteContext } from '~/contexts/QuoteContext';
-import { QuoteRequestBody, FeeCommitment, SNQuoteResponse } from '~/types';
+import { QuoteRequestBody, SNQuoteResponse, SignedFeeCommitment } from '~/types';
 import { calculateRemainingTime } from '~/utils';
 
 let globalTimerInstanceActive = false;
@@ -26,7 +26,7 @@ interface UseRequestQuoteParams {
 }
 
 interface UseRequestQuoteReturn {
-  quoteCommitment: FeeCommitment | null;
+  quoteCommitment: SignedFeeCommitment | null;
   feeBPS: number | null;
   baseFeeBPS: number | null;
   extraGasAmountETH: string | null;

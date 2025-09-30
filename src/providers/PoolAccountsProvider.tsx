@@ -9,10 +9,10 @@ import { useChainContext } from '~/hooks';
 import {
   CommitmentProof,
   EventType,
-  FeeCommitment,
   HistoryData,
   PoolAccount,
   RagequitProof,
+  SignedFeeCommitment,
   WithdrawalProof,
   WithdrawalRelayerPayload,
 } from '~/types';
@@ -50,8 +50,8 @@ type ContextType = {
   setTransactionHash: (val: Address) => void;
   actionType: EventType | undefined;
   setActionType: (val?: EventType) => void;
-  feeCommitment: FeeCommitment | null;
-  setFeeCommitment: (val: FeeCommitment | null) => void;
+  feeCommitment: SignedFeeCommitment | null;
+  setFeeCommitment: (val: SignedFeeCommitment | null) => void;
   resetTransactionState: () => void;
   isAssetConfigLoading: boolean;
   feeBPSForWithdraw: bigint;
@@ -83,7 +83,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
   const [proof, setProof] = useState<ContextType['proof']>(null);
   const [withdrawal, setWithdrawal] = useState<Withdraw | null>(null);
   const [newSecretKeys, setNewSecretKeys] = useState<{ secret: bigint; nullifier: bigint } | null>(null);
-  const [feeCommitment, setFeeCommitment] = useState<FeeCommitment | null>(null);
+  const [feeCommitment, setFeeCommitment] = useState<SignedFeeCommitment | null>(null);
   const [feeBPSForWithdraw, setFeeBPSForWithdraw] = useState<bigint>(BigInt(0));
 
   const [selectedHistoryData, setSelectedHistoryData] = useState<HistoryData[number]>();
