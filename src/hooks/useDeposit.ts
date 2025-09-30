@@ -6,7 +6,7 @@ import { parseUnits } from 'viem/utils';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
 import { createDepositSecrets } from '~/utils';
-import { waitForEvents } from '../utils/sdk';
+import { getScope, waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
 import { useSdk } from './useSdkWorker';
 
@@ -22,7 +22,7 @@ export const useDeposit = () => {
   const { sendAsync } = useSendTransaction({});
   const { amount, setTransactionHash } = usePoolAccountsContext();
   const [isLoading, setIsLoading] = useState(false);
-  const { accountService, poolAccounts, addPoolAccount } = useAccountContext();
+  const { accountService, addPoolAccount } = useAccountContext();
 
   const deposit = async () => {
     try {
@@ -32,21 +32,15 @@ export const useDeposit = () => {
       if (!accountService) throw new Error('AccountService not found');
       if (!address) throw new Error('Address not found');
 
-      // Count only pool accounts for the current scope
-      const poolAccountsForScope = poolAccounts.filter((account) => account.scope === selectedPoolInfo.scope);
-
+      const scope = await getScope(selectedPoolInfo);
       const {
         nullifier,
         secret,
         precommitment: precommitmentHash,
-      } = createDepositSecrets(
-        accountService,
-        BigInt(selectedPoolInfo.scope) as Hash,
-        BigInt(poolAccountsForScope.length),
-      );
+      } = createDepositSecrets(accountService, BigInt(scope) as Hash, BigInt(scope.length));
       const value = parseUnits(amount, decimals);
 
-      if (!selectedPoolInfo.scope || !precommitmentHash || !value) throw new Error('Missing required data to deposit');
+      if (!scope || !precommitmentHash || !value) throw new Error('Missing required data to deposit');
 
       // Only set transaction hash and modal if not already done in Safe batch path
       setModalOpen(ModalType.PROCESSING);
@@ -70,7 +64,7 @@ export const useDeposit = () => {
       const [{ label, value: _value, blockNumber }] = deposits;
 
       addPoolAccount(accountService, {
-        scope: selectedPoolInfo.scope,
+        scope,
         value: _value,
         nullifier: nullifier as Secret,
         secret: secret as Secret,

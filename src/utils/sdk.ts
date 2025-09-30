@@ -145,7 +145,7 @@ export const relay = async ({
   return contract.relay(withdraw, proof, scope);
 };
 
-export const getScope = async (poolInfo: PoolInfo) => {
+export const getScope = async (poolInfo: Pick<PoolInfo, 'entryPointAddress' | 'address'>) => {
   const sdk = initializeSDK();
   const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, snRpcProvider as never);
   return toAddress(await contract.getScope(poolInfo.address));
