@@ -14,7 +14,6 @@ export * from './useRequestQuote';
 export * from './useSafeApp';
 export * from '../contexts/QuoteContext';
 export * from './useCircuitPreloader';
-export * from './useZKProofWorker';
 export * from './context/useChainContext';
 export * from './context/usePoolAccountsContext';
 export * from './context/useAccountContext';
