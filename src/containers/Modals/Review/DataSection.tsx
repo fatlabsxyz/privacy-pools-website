@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import { Stack, styled, Typography, IconButton, Collapse, Avatar } from '@mui/material';
+import { Stack, styled, Typography, IconButton, Collapse } from '@mui/material';
+import { useAccount, useStarkName } from '@starknet-react/core';
 import { formatUnits, parseUnits, isAddress } from 'viem';
-import { useAccount, useEnsName, useEnsAvatar } from 'wagmi';
 import { ExtendedTooltip as Tooltip } from '~/components';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -13,7 +13,11 @@ import {
   useRequestQuote,
   useNotifications,
 } from '~/hooks';
-import { EventType } from '~/types';
+import {
+  EventType,
+  // QuoteRequestBody,
+  // QuoteResponse
+} from '~/types';
 import { getUsdBalance, truncateAddress } from '~/utils';
 import { FeeBreakdown, formatFeeDisplay } from './FeeBreakdown';
 
@@ -54,6 +58,31 @@ export const DataSection = () => {
   // Add quote timer for withdrawals
   const amountBN = parseUnits(amount, decimals);
   const { getQuote, isQuoteLoading, quoteError } = relayerData || {};
+  // const { getQuote, isQuoteLoading, quoteError } = {
+  //   getQuote: async (_: QuoteRequestBody) => {
+  //     return {
+  //       baseFeeBPS: '1',
+  //       feeBPS: '1',
+  //       gasPrice: '1',
+  //       feeCommitment: {
+  //         expiration: Date.now() + 3600 * 1000,
+  //         withdrawalData: '',
+  //         signedRelayerCommitment: '',
+  //         extraGas: undefined,
+  //       },
+  //       detail: {
+  //         relayTxCost: {
+  //           gas: '1',
+  //           eth: '0.000lol',
+  //         },
+  //         extraGasFundAmount: undefined,
+  //         extraGasTxCost: undefined,
+  //       },
+  //     } satisfies QuoteResponse;
+  //   },
+  //   isQuoteLoading: false,
+  //   quoteError: null,
+  // };
   const {
     countdown,
     isQuoteValid,
@@ -93,14 +122,8 @@ export const DataSection = () => {
   const toAddress = isDeposit ? '' : target;
 
   // ENS hooks for the target address
-  const { data: ensName } = useEnsName({
+  const { data: ensName } = useStarkName({
     address: isAddress(toAddress) ? (toAddress as `0x${string}`) : undefined,
-    chainId: 1, // Always use mainnet for ENS
-  });
-
-  const { data: ensAvatar } = useEnsAvatar({
-    name: ensName || undefined,
-    chainId: 1, // Always use mainnet for ENS
   });
 
   // Use fresh quote fees for withdrawals, fallback to context fees if no quote
@@ -197,7 +220,6 @@ export const DataSection = () => {
         <Row>
           <Label variant='body2'>To:</Label>
           <Value variant='body2' sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {ensAvatar && <Avatar src={ensAvatar} sx={{ width: 20, height: 20 }} />}
             <Tooltip title={toAddress} placement='top'>
               <span>
                 {toAddress && (ensName || truncateAddress(toAddress))}

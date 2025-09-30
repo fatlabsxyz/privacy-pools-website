@@ -1,11 +1,15 @@
+import { StarknetAddress, StarknetWithdrawal, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { Address } from '@starknet-react/chains';
+import { BigNumberish } from 'starknet';
+
 /**
  * Represents the payload for a withdrawal relayer request.
  */
 export interface WithdrawalRelayerPayload {
   /** Relayer address (0xAdDrEsS) */
-  processooor: string;
+  processor: string;
   /** Transaction data (hex encoded) */
-  data: string;
+  data: bigint[];
 }
 
 /**
@@ -36,6 +40,24 @@ export interface RelayRequestBody {
   feeCommitment: FeeCommitment;
 }
 
+interface SNFeeCommitment {
+  withdrawalData: BigNumberish[];
+  asset: Address;
+  expiration: number;
+  amount: bigint;
+  extraGas: boolean;
+}
+
+export interface SignedFeeCommitment extends SNFeeCommitment {
+  signedRelayerCommitment: string;
+}
+
+export interface SNRelayRequestBody extends WithdrawalProof {
+  readonly withdrawal: StarknetWithdrawal;
+  readonly scope: StarknetAddress;
+  readonly feeCommitment?: SignedFeeCommitment;
+}
+
 // GET /fees
 export type FeesResponse = {
   feeBPS: string;
@@ -50,6 +72,7 @@ export type FeesResponse = {
  * Represents the response from a relayer operation.
  */
 export interface RelayerResponse {
+  transaction_hash(arg0: string, transaction_hash: string, arg2: never): unknown;
   /** Indicates if the request was successful */
   success: boolean;
   /** Timestamp of the response */
@@ -67,7 +90,7 @@ export interface RelayerResponse {
  */
 export type QuoteRequestBody = {
   /** The chain ID for the withdrawal. */
-  chainId: number;
+  chainId: string;
   /** The withdrawal amount as a string representation of a BigInt (in wei or base units). */
   amount: string;
   /** The address of the asset being withdrawn. */
@@ -129,4 +152,8 @@ export type QuoteResponse = {
   feeCommitment: FeeCommitment;
   /** Detailed breakdown of costs and gas amounts. */
   detail: QuoteDetailBreakdown;
+};
+
+export type SNQuoteResponse = Omit<QuoteResponse, 'feeCommitment'> & {
+  feeCommitment: SignedFeeCommitment;
 };

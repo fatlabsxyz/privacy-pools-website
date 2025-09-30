@@ -1,7 +1,7 @@
 'use server';
 
-import { Hex } from 'viem';
-import { AccountCommitment, SDKPoolAccount, ReviewStatus, RagequitEvent, Hash, EventType } from '~/types';
+import { Address, StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { AccountCommitment, SDKPoolAccount, ReviewStatus, RagequitEvent, EventType } from '~/types';
 
 type RagequitEventWithTimestamp = RagequitEvent & {
   timestamp: bigint;
@@ -13,17 +13,17 @@ export type PoolAccount = SDKPoolAccount & {
   isValid: boolean; // included in ASP leaves
   reviewStatus: ReviewStatus; // ASP status
   lastCommitment: AccountCommitment;
-  chainId: number;
-  scope: Hash;
+  chainId: string;
+  scope: StarknetAddress;
   ragequit?: RagequitEventWithTimestamp;
 };
 
 export type HistoryData = {
   type: EventType;
   amount: bigint; // amount of the action
-  txHash: Hex; // key id
+  txHash: Address; // key id
   timestamp: number;
   reviewStatus: ReviewStatus;
   label: bigint;
-  scope: Hash;
+  scope: StarknetAddress;
 }[];

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { formatUnits } from 'viem';
+import { formatUnits } from 'viem/utils';
 import { getConfig } from '~/config';
 import { useChainContext, useExternalServices, useAccountContext } from '~/hooks';
 import { aspClient } from '~/utils';
@@ -29,7 +29,7 @@ export const useAdvancedView = () => {
 
   const allEventsByPageQuery = useQuery({
     queryKey: ['asp_all_events_by_page', currentPage, chainId, selectedPoolInfo.scope.toString()],
-    queryFn: () => aspClient.fetchAllEvents(aspUrl, chainId, selectedPoolInfo.scope.toString(), currentPage),
+    queryFn: () => aspClient.fetchAllEvents(aspUrl, +chainId, selectedPoolInfo.scope.toString(), currentPage),
     refetchInterval: 60000,
     retryOnMount: false,
   });

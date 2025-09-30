@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useEffect, useState } from 'react';
-import { useAccount, useDisconnect } from 'wagmi';
+import { useAccount, useDisconnect } from '@starknet-react/core';
 import { setUserLoggedCookie, deleteUserLoggedCookie, deleteUserConnectedCookie } from '~/actions';
 import { useAccountContext } from '~/hooks';
 

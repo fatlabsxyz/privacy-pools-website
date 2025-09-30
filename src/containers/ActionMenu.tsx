@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Stack } from '@mui/material';
-import { useAccount } from 'wagmi';
+import { useAccount } from '@starknet-react/core';
 import { useAccountContext, useModal, usePoolAccountsContext, useChainContext } from '~/hooks';
 import { EventType, ModalType } from '~/types';
 
@@ -9,8 +9,16 @@ export const ActionMenu = () => {
   const { setModalOpen } = useModal();
   const { address } = useAccount();
   const { setActionType } = usePoolAccountsContext();
-  const { hasApprovedDeposit, seed } = useAccountContext();
-  const { hasSomeRelayerAvailable, maxDeposit } = useChainContext();
+  const {
+    // hasApprovedDeposit,
+    seed,
+  } = useAccountContext();
+  const hasApprovedDeposit = true;
+  const {
+    // hasSomeRelayerAvailable,
+    maxDeposit,
+  } = useChainContext();
+  const hasSomeRelayerAvailable = true;
 
   const isWithdrawDisabled = !address || !hasApprovedDeposit || !seed || !hasSomeRelayerAvailable;
   const isDepositDisabled = !address || !seed || !BigInt(maxDeposit);

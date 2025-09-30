@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { FeeCommitment } from '~/types';
+import { FeeCommitment, SignedFeeCommitment } from '~/types';
 
 interface QuoteState {
-  quoteCommitment: FeeCommitment | null;
+  quoteCommitment: SignedFeeCommitment | null;
   feeBPS: number | null;
   baseFeeBPS: number | null;
   extraGasAmountETH: string | null;
@@ -16,7 +16,7 @@ interface QuoteState {
 interface QuoteContextType {
   quoteState: QuoteState;
   setQuoteData: (
-    commitment: FeeCommitment,
+    commitment: SignedFeeCommitment,
     feeBPS: number,
     baseFeeBPS: number,
     extraGasAmountETH: string | null,

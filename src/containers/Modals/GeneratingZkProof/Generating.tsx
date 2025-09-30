@@ -16,7 +16,9 @@ interface ZKProofProgress {
 export const GeneratingModal = () => {
   const { setModalOpen, modalOpen } = useModal();
   const { generateProofAndWithdraw } = useWithdraw();
+  // const { generateProofAndWithdraw } = { generateProofAndWithdraw: () => {} };
   const { generateProofAndExit } = useExit();
+  // const { generateProofAndExit } = { generateProofAndExit: () => {} };
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<ZKProofProgress>({ phase: 'loading_circuits', progress: 0 });
 
@@ -95,7 +97,7 @@ export const GeneratingModal = () => {
     }
 
     if (actionType === EventType.EXIT) {
-      generateProofAndExit(updateProgress)
+      generateProofAndExit()
         .then(() => {
           // generateProofAndExit handles the full flow including transaction processing
           // Modal transitions are handled by the exit hook

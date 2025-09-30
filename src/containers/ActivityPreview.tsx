@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, Stack, styled, Theme, Typography } from '@mui/material';
-import { useAccount } from 'wagmi';
+import { useAccount } from '@starknet-react/core';
 import { ActivityTable } from '~/components';
 import { InfoTooltip } from '~/components/InfoTooltip';
 import { ViewAllButton, ViewAllText } from '~/containers';

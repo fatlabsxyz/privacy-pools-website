@@ -242,7 +242,10 @@ export const AccountProvider = ({ children }: Props) => {
 
   useEffect(() => {
     if (!accountServiceRef.current) return; // Not initialized yet
-    if (selectedPoolInfo.chainId === poolAccounts[0]?.chainId && selectedPoolInfo.scope === poolAccounts[0]?.scope)
+    if (
+      selectedPoolInfo.chainId === poolAccounts[0]?.chainId.toString() &&
+      selectedPoolInfo.scope === poolAccounts[0]?.scope
+    )
       return;
 
     const newPoolAccounts = poolAccountsByChainScope[`${selectedPoolInfo.chainId}-${selectedPoolInfo.scope}`];

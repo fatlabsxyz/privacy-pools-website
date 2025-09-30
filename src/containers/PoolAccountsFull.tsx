@@ -11,8 +11,14 @@ export const PoolAccountsFull = () => {
   const {
     balanceBN: { symbol, decimals },
   } = useChainContext();
-  const { poolAccounts, allPools, amountPoolAsset, pendingAmountPoolAsset, hideEmptyPools, toggleHideEmptyPools } =
-    useAccountContext();
+  const {
+    poolAccounts,
+    allPools,
+    amountPoolAsset,
+    // pendingAmountPoolAsset,
+    hideEmptyPools,
+    toggleHideEmptyPools,
+  } = useAccountContext();
   const { ITEMS_PER_PAGE, fullPoolAccounts } = useAdvancedView();
   const { isLogged } = useAuthContext();
 
@@ -42,13 +48,13 @@ export const PoolAccountsFull = () => {
                 </EthText>
               </Stack>
 
-              <Stack width='50%' gap={1}>
+              {/* <Stack width='50%' gap={1}>
                 <Subtitle variant='caption'>Being validated:</Subtitle>
                 <EthText variant='subtitle1' fontWeight='bold'>
                   {formatUnits(pendingAmountPoolAsset, decimals)}
                   <span>{symbol}</span>
                 </EthText>
-              </Stack>
+              </Stack> */}
             </Stack>
           )}
         </Section>

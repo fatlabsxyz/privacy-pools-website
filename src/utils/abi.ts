@@ -1,5 +1,3 @@
-import { Abi } from 'viem';
-
 export const assetConfig = [
   {
     type: 'function',
@@ -1193,7 +1191,7 @@ export const scope = [
     outputs: [{ name: '_scope', type: 'uint256', internalType: 'uint256' }],
     stateMutability: 'view',
   },
-] as Abi;
+];
 
 export const leafInserted = {
   type: 'event',

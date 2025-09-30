@@ -1,5 +1,5 @@
+import { Address } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { describe, expect, it } from '@jest/globals';
-import { Address } from 'viem';
 import { MOCK_RELAYER, MOCK_WITHDRAWAL_REQUEST } from '~/__tests__/__mocks__';
 import { prepareWithdrawRequest } from '~/utils';
 
