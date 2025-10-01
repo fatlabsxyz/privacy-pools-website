@@ -6,7 +6,7 @@ import { useSendTransaction, useAccount } from '@starknet-react/core';
 import { useChainContext, useAccountContext, useModal, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType } from '~/types';
 import { waitForEvents } from '~/utils';
-import { useSdk } from './useSdkWorker';
+import { useSdk } from './useWorkerSdk';
 
 export const useExit = () => {
   const { address } = useAccount();
@@ -16,12 +16,12 @@ export const useExit = () => {
   const { setModalOpen, setIsClosable } = useModal();
   const { selectedPoolInfo } = useChainContext();
   const { poolAccount, setTransactionHash } = usePoolAccountsContext();
-  const { seed, accountService, addRagequit } = useAccountContext();
+  const { seed, addRagequit } = useAccountContext();
   const [isLoading, setIsLoading] = useState(false);
 
   const exit = useCallback(async () => {
     try {
-      if (!poolAccount || !accountService || !seed) throw new Error('Missing required data to exit');
+      if (!poolAccount || !seed) throw new Error('Missing required data to exit');
 
       setIsClosable(false);
       setIsLoading(true);
@@ -48,7 +48,7 @@ export const useExit = () => {
 
       const [receipt] = receipts;
 
-      addRagequit(accountService, {
+      addRagequit({
         label: receipt.label as Hash,
         ragequit: {
           ragequitter: address!,
@@ -95,7 +95,6 @@ export const useExit = () => {
     setIsLoading(false);
   }, [
     poolAccount,
-    accountService,
     seed,
     setIsClosable,
     setIsLoading,

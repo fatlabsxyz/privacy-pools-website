@@ -1,11 +1,18 @@
 'use client';
 
 import { createContext, SetStateAction, Dispatch, useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { ChainData } from '~/config';
 import { getEnv } from '~/config/env';
 import { useChainContext, useExternalServices, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { useAccountManager } from '~/hooks/useAccountManager';
+import { useSdk } from '~/hooks/useWorkerSdk';
 import { AccountService, DepositsByLabelResponse, EventType, PoolAccount, ReviewStatus, HistoryData } from '~/types';
-import { addPoolAccount, addWithdrawal, getPoolAccountsFromAccount, addRagequit } from '~/utils';
+import {
+  AccountRetrievalData,
+  AddPoolAccountCommand,
+  AddRagequitCommand,
+  AddWithdrawalCommand,
+} from '~/types/worker-commands.interface';
 
 const { TEST_MODE } = getEnv();
 
@@ -20,11 +27,11 @@ type ContextType = {
   isLoading: boolean;
   hasApprovedDeposit: boolean;
 
-  createAccount: (seed: string) => void;
+  createAccount: (seed: string, chain: ChainData[string]) => Promise<unknown>;
   loadAccount: (seed: string) => Promise<void>;
-  addPoolAccount: (...params: Parameters<typeof addPoolAccount>) => void;
-  addWithdrawal: (...params: Parameters<typeof addWithdrawal>) => void;
-  addRagequit: (...params: Parameters<typeof addRagequit>) => void;
+  addPoolAccount: (params: Omit<AddPoolAccountCommand, 'type'>) => void;
+  addWithdrawal: (params: Omit<AddWithdrawalCommand, 'type'>) => void;
+  addRagequit: (params: Omit<AddRagequitCommand, 'type'>) => void;
   resetGlobalState: () => void;
 
   allPools: number;
@@ -50,20 +57,15 @@ export const AccountProvider = ({ children }: Props) => {
   const [poolAccountsByChainScope, setPoolAccountsByChainScope] = useState<ContextType['poolAccountsByChainScope']>({});
   const [isLoading, setIsLoading] = useState(false);
   const [hideEmptyPools, setHideEmptyPools] = useState(false);
-  const { selectedPoolInfo } = useChainContext();
+  const { selectedPoolInfo, chain } = useChainContext();
   const { addNotification } = useNotifications();
+  const { addPoolAccount, addRagequit, addWithdrawal } = useSdk();
   const {
     aspData: { mtLeavesData, fetchDepositsByLabel, refetchMtLeaves, isError: aspError, isLoading: aspIsLoading },
   } = useExternalServices();
   const { poolAccount, setPoolAccount } = usePoolAccountsContext();
 
-  const { loadAccount, createAccount } = useAccountManager(
-    setSeed,
-    setPoolAccounts,
-    setPoolAccountsByChainScope,
-    accountServiceRef,
-    selectedPoolInfo.chainId,
-  );
+  const { loadChainAccounts, createAccount } = useAccountManager(setPoolAccounts, setPoolAccountsByChainScope);
 
   const allPools = poolAccounts.length;
 
@@ -174,49 +176,54 @@ export const AccountProvider = ({ children }: Props) => {
         throw new Error('Seed not found');
       }
 
-      const _poolAccounts = await loadAccount(seed);
+      const _poolAccounts = (await loadChainAccounts({ seed, chain })).poolAccounts;
       fetchAndProcessDeposits(_poolAccounts);
     },
-    [loadAccount, fetchAndProcessDeposits],
+    [fetchAndProcessDeposits, chain, loadChainAccounts],
   );
 
   const handleUpdatePoolAccounts = useCallback(async () => {
-    if (!accountServiceRef.current) throw new Error('Account service not found');
     setIsLoading(true);
 
-    const { poolAccounts, poolAccountsByChainScope } = await getPoolAccountsFromAccount(
-      accountServiceRef.current.account,
-      selectedPoolInfo.chainId,
-    );
+    const { poolAccounts, poolAccountsByChainScope } = await loadChainAccounts({ seed: seed!, chain, refetch: false });
 
     setPoolAccountsByChainScope(poolAccountsByChainScope);
     setPoolAccounts(poolAccounts);
 
     fetchAndProcessDeposits(poolAccounts);
-  }, [fetchAndProcessDeposits, selectedPoolInfo.chainId]);
+  }, [chain, fetchAndProcessDeposits, loadChainAccounts, seed]);
 
   const handleAddPoolAccount = useCallback(
-    (...params: Parameters<typeof addPoolAccount>) => {
-      addPoolAccount(...params);
+    (params: Omit<Parameters<typeof addPoolAccount>[0], keyof AccountRetrievalData>) => {
+      if (!seed) {
+        throw new Error('Missing Seed.');
+      }
+      addPoolAccount({ ...params, seed, chain });
       handleUpdatePoolAccounts();
     },
-    [handleUpdatePoolAccounts],
+    [addPoolAccount, chain, handleUpdatePoolAccounts, seed],
   );
 
   const handleAddWithdrawal = useCallback(
-    (...params: Parameters<typeof addWithdrawal>) => {
-      addWithdrawal(...params);
+    (params: Omit<Parameters<typeof addWithdrawal>[0], keyof AccountRetrievalData>) => {
+      if (!seed) {
+        throw new Error('Missing Seed.');
+      }
+      addWithdrawal({ ...params, seed, chain });
       handleUpdatePoolAccounts();
     },
-    [handleUpdatePoolAccounts],
+    [addWithdrawal, chain, handleUpdatePoolAccounts, seed],
   );
 
   const handleAddRagequit = useCallback(
-    (...params: Parameters<typeof addRagequit>) => {
-      addRagequit(...params);
+    (params: Omit<AddRagequitCommand, 'type'>) => {
+      if (!seed) {
+        throw new Error('Missing Seed.');
+      }
+      addRagequit({ ...params, seed, chain });
       handleUpdatePoolAccounts();
     },
-    [handleUpdatePoolAccounts],
+    [addRagequit, chain, handleUpdatePoolAccounts, seed],
   );
 
   const resetGlobalState = () => {

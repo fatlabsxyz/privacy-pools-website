@@ -15,7 +15,7 @@ export const CreateHistoryFile = () => {
   const goTo = useGoTo();
   const { setActionType } = usePoolAccountsContext();
   const { createAccount } = useAccountContext();
-  const { maxDeposit } = useChainContext();
+  const { maxDeposit, chain } = useChainContext();
   const { login } = useAuthContext();
   const { setModalOpen } = useModal();
   const [seedPhrase, setSeedPhrase] = useState('');
@@ -29,7 +29,7 @@ export const CreateHistoryFile = () => {
   const handleCreateHistoryFile = () => {
     if (!isConfirmed || !isVerified) return;
 
-    createAccount(seedPhrase);
+    createAccount(seedPhrase, chain);
     setIsHistoryFileCreated(true);
   };
 

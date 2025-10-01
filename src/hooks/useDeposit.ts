@@ -5,39 +5,40 @@ import { useAccount, useSendTransaction } from '@starknet-react/core';
 import { parseUnits } from 'viem/utils';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
-import { createDepositSecrets } from '~/utils';
-import { getScope, waitForEvents } from '../utils/sdk';
+import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
-import { useSdk } from './useSdkWorker';
+import { useSdk } from './useWorkerSdk';
 
 export const useDeposit = () => {
   const { address } = useAccount();
   const {
     selectedPoolInfo,
     balanceBN: { decimals },
+    chain,
   } = useChainContext();
-  const { deposit: sdkDeposit } = useSdk();
+  const { deposit: sdkDeposit, createDepositSecrets } = useSdk();
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const { setModalOpen, setIsClosable } = useModal();
   const { sendAsync } = useSendTransaction({});
   const { amount, setTransactionHash } = usePoolAccountsContext();
   const [isLoading, setIsLoading] = useState(false);
-  const { accountService, addPoolAccount } = useAccountContext();
+  const { addPoolAccount, seed } = useAccountContext();
 
   const deposit = async () => {
     try {
       setIsClosable(false);
       setIsLoading(true);
 
-      if (!accountService) throw new Error('AccountService not found');
       if (!address) throw new Error('Address not found');
+      if (!seed) throw new Error('Seed not set');
 
-      const scope = await getScope(selectedPoolInfo);
+      const scope = selectedPoolInfo.scope;
+
       const {
         nullifier,
         secret,
         precommitment: precommitmentHash,
-      } = createDepositSecrets(accountService, BigInt(scope) as Hash, BigInt(scope.length));
+      } = await createDepositSecrets({ chain, seed, scope });
       const value = parseUnits(amount, decimals);
 
       if (!scope || !precommitmentHash || !value) throw new Error('Missing required data to deposit');
@@ -63,7 +64,7 @@ export const useDeposit = () => {
 
       const [{ label, value: _value, blockNumber }] = deposits;
 
-      addPoolAccount(accountService, {
+      addPoolAccount({
         scope,
         value: _value,
         nullifier: nullifier as Secret,

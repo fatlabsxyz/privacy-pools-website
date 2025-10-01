@@ -19,12 +19,11 @@ import {
   getMerkleProof,
   verifyWithdrawalProof,
   prepareWithdrawalProofInput,
-  createWithdrawalSecrets,
   waitForEvents,
   getScope,
   getDeposits,
 } from '~/utils';
-import { useSdk } from './useSdkWorker';
+import { useSdk } from './useWorkerSdk';
 
 const PRIVACY_POOL_ERRORS = {
   'Error: InvalidProof()': 'Failed to verify withdrawal proof. Please regenerate your proof and try again.',
@@ -48,7 +47,8 @@ const PRIVACY_POOL_ERRORS = {
 export const useWithdraw = () => {
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
-  const { withdraw: sdkWithdraw } = useSdk();
+  const { withdraw: sdkWithdraw, createWithdrawalSecrets } = useSdk();
+  const { chain } = useChainContext();
   const { setModalOpen, setIsClosable } = useModal();
   const { aspData, relayerData } = useExternalServices();
   const { resetQuote, quoteState } = useQuoteContext();
@@ -59,7 +59,7 @@ export const useWithdraw = () => {
     selectedRelayer,
   } = useChainContext();
 
-  const { accountService, addWithdrawal } = useAccountContext();
+  const { accountService, addWithdrawal, seed } = useAccountContext();
 
   const {
     amount,
@@ -240,6 +240,9 @@ export const useWithdraw = () => {
         // relayerAddressToUse = address!;
         throw new Error('Relayer details not available');
       }
+      if (!seed) {
+        throw new Error('Seed missing.');
+      }
       if (!commitment) {
         throw new Error('Commitment not available');
       }
@@ -269,11 +272,11 @@ export const useWithdraw = () => {
           selectedPoolInfo,
         );
 
-        poolScope = await getScope(selectedPoolInfo);
+        poolScope = selectedPoolInfo.scope;
         stateMerkleProof = generateMerkleProof(sateLeavesToUse, commitment.hash);
         aspMerkleProof = generateMerkleProof(aspLeavesToUse, commitment.label);
         const context = await getContext(newWithdrawal, poolScope);
-        const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
+        const { secret, nullifier } = await createWithdrawalSecrets({ commitment, seed, chain });
 
         aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue
 
@@ -335,7 +338,10 @@ export const useWithdraw = () => {
       stateLeaves,
       feeBPSForWithdraw,
       selectedPoolInfo,
+      seed,
       selectedRelayer?.url,
+      createWithdrawalSecrets,
+      chain,
       amount,
       decimals,
       sdkWithdraw,
@@ -396,7 +402,7 @@ export const useWithdraw = () => {
         setTransactionHash(txHash);
         setModalOpen(ModalType.PROCESSING);
 
-        addWithdrawal(accountService, {
+        addWithdrawal({
           parentCommitment: commitment,
           value: poolAccount?.balance - withdrawnValue,
           nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,

@@ -1,13 +1,13 @@
 'use client';
 
-import { createContext, useEffect, useMemo, useState, useRef, useCallback, useContext } from 'react';
+import { createContext, useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useAccount, useBalance } from '@starknet-react/core';
 import { useQueries } from '@tanstack/react-query';
 import { parseEther } from 'viem';
 import { ChainData, chainData, ChainAssets, whitelistedChains, PoolInfo, getConfig } from '~/config';
 import { useNotifications } from '~/hooks';
+import { useSdk } from '~/hooks/useWorkerSdk';
 import { fetchTokenPrice, relayerClient } from '~/utils';
-import { SnSdkContext } from './SnSdkProvider';
 
 type RelayerDataType = {
   name: string;
@@ -52,7 +52,7 @@ const {
 export const ChainContext = createContext({} as ContextType);
 
 export const ChainProvider = ({ children }: Props) => {
-  const { createPoolContract, createSdk } = useContext(SnSdkContext);
+  const {} = useSdk();
   const { address } = useAccount();
   const [chainId, setChainId] = useState(whitelistedChains[0].id.toString());
   const { addNotification } = useNotifications();
@@ -86,17 +86,6 @@ export const ChainProvider = ({ children }: Props) => {
   const selectedPoolInfo = useMemo(() => {
     return chain.poolInfo.find((pool) => pool.asset === selectedAsset) ?? chain.poolInfo[0];
   }, [chain.poolInfo, selectedAsset]);
-
-  const sdk = useMemo(() => createSdk(), [createSdk]);
-  const poolContract = useMemo(
-    () =>
-      createPoolContract({
-        sdk,
-        entryPoint: selectedPoolInfo.entryPointAddress,
-        rpcUrl: chain.rpcUrl,
-      }),
-    [chain.rpcUrl, createPoolContract, sdk, selectedPoolInfo.entryPointAddress],
-  );
 
   // User balance based on the selected asset
   const { data: userBalance } = useBalance({
