@@ -5,48 +5,43 @@ import { useAccount, useSendTransaction } from '@starknet-react/core';
 import { parseUnits } from 'viem/utils';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
-import { createDepositSecrets } from '~/utils';
 import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
-import { useSdk } from './useSdkWorker';
+import { useSdk } from './useWorkerSdk';
 
 export const useDeposit = () => {
   const { address } = useAccount();
   const {
     selectedPoolInfo,
     balanceBN: { decimals },
+    chain,
   } = useChainContext();
-  const { deposit: sdkDeposit } = useSdk();
+  const { deposit: sdkDeposit, createDepositSecrets } = useSdk();
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const { setModalOpen, setIsClosable } = useModal();
   const { sendAsync } = useSendTransaction({});
   const { amount, setTransactionHash } = usePoolAccountsContext();
   const [isLoading, setIsLoading] = useState(false);
-  const { accountService, poolAccounts, addPoolAccount } = useAccountContext();
+  const { addPoolAccount, seed } = useAccountContext();
 
   const deposit = async () => {
     try {
       setIsClosable(false);
       setIsLoading(true);
 
-      if (!accountService) throw new Error('AccountService not found');
       if (!address) throw new Error('Address not found');
+      if (!seed) throw new Error('Seed not set');
 
-      // Count only pool accounts for the current scope
-      const poolAccountsForScope = poolAccounts.filter((account) => account.scope === selectedPoolInfo.scope);
+      const scope = selectedPoolInfo.scope;
 
       const {
         nullifier,
         secret,
         precommitment: precommitmentHash,
-      } = createDepositSecrets(
-        accountService,
-        BigInt(selectedPoolInfo.scope) as Hash,
-        BigInt(poolAccountsForScope.length),
-      );
+      } = await createDepositSecrets({ chain, seed, scope });
       const value = parseUnits(amount, decimals);
 
-      if (!selectedPoolInfo.scope || !precommitmentHash || !value) throw new Error('Missing required data to deposit');
+      if (!scope || !precommitmentHash || !value) throw new Error('Missing required data to deposit');
 
       // Only set transaction hash and modal if not already done in Safe batch path
       setModalOpen(ModalType.PROCESSING);
@@ -69,8 +64,8 @@ export const useDeposit = () => {
 
       const [{ label, value: _value, blockNumber }] = deposits;
 
-      addPoolAccount(accountService, {
-        scope: selectedPoolInfo.scope,
+      addPoolAccount({
+        scope,
         value: _value,
         nullifier: nullifier as Secret,
         secret: secret as Secret,

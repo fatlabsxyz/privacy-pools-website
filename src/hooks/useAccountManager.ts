@@ -1,40 +1,36 @@
 'use client';
 
-import { RefObject, useCallback } from 'react';
-import { AccountService, PoolAccount } from '~/types';
-import { createAccount as sdkCreateAccount, getPoolAccountsFromAccount, loadAccount as sdkLoadAccount } from '~/utils';
+import { useCallback } from 'react';
+import { toAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
+import { ChainData } from '~/config';
+import { PoolAccount } from '~/types';
+import { useSdk } from './useWorkerSdk';
 
 export function useAccountManager(
   setSeed: (seed: string) => void,
   setPoolAccounts: (poolAccounts: PoolAccount[]) => void,
   setPoolAccountsByChainScope: (poolAccountsByChainScope: Record<string, PoolAccount[]>) => void,
-  accountServiceRef: RefObject<AccountService | null>,
-  chainId: string,
 ) {
-  const createAccount = useCallback(
-    (_seed: string) => {
-      if (!_seed) throw new Error('Seed not found');
+  const { loadAccounts } = useSdk();
 
-      const _accountService = sdkCreateAccount(_seed);
-      setSeed(_seed);
-      accountServiceRef.current = _accountService;
+  const loadChainAccounts = useCallback(
+    async ({ seed, chain, refetch = true }: { seed: string; chain: ChainData[string]; refetch?: boolean }) => {
+      const { poolAccounts, poolAccountsByChainScope } = await loadAccounts({ seed, chain, refetch });
+      setPoolAccounts(poolAccounts.map((account) => ({ ...account, scope: toAddress(account.scope) })));
+      setPoolAccountsByChainScope(poolAccountsByChainScope);
+
+      return { poolAccounts, poolAccountsByChainScope };
     },
-    [setSeed, accountServiceRef],
+    [loadAccounts, setPoolAccounts, setPoolAccountsByChainScope],
   );
 
-  const loadAccount = async (seed: string) => {
-    const _accountService = await sdkLoadAccount(seed);
-    accountServiceRef.current = _accountService;
+  const createAccount = useCallback(
+    async (seed: string, chain: ChainData[string]) => {
+      await loadChainAccounts({ seed, chain, refetch: false });
+      setSeed(seed);
+    },
+    [loadChainAccounts, setSeed],
+  );
 
-    const { poolAccounts, poolAccountsByChainScope } = await getPoolAccountsFromAccount(
-      _accountService.account,
-      chainId,
-    );
-    setPoolAccounts(poolAccounts);
-    setPoolAccountsByChainScope(poolAccountsByChainScope);
-
-    return poolAccounts;
-  };
-
-  return { loadAccount, createAccount };
+  return { loadChainAccounts, createAccount };
 }

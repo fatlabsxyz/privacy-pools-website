@@ -8,6 +8,7 @@ import { ModalProvider } from './ModalProvider';
 import { NotificationProvider } from './NotificationProvider';
 import { PoolAccountsProvider } from './PoolAccountsProvider';
 import { SafeProviderWrapper } from './SafeProvider';
+import { SnSdkProvider } from './SnSdkProvider';
 import { StarknetProvider } from './StarknetProvider';
 import { ThemeProvider } from './ThemeProvider';
 
@@ -22,17 +23,19 @@ export const Providers = ({ children }: Props) => {
         <NotificationProvider>
           <CircuitProvider>
             <StarknetProvider>
-              <ChainProvider>
-                <PoolAccountsProvider>
-                  <AccountProvider>
-                    <AuthProvider>
-                      <QuoteProvider>
-                        <ModalProvider>{children}</ModalProvider>
-                      </QuoteProvider>
-                    </AuthProvider>
-                  </AccountProvider>
-                </PoolAccountsProvider>
-              </ChainProvider>
+              <SnSdkProvider>
+                <ChainProvider>
+                  <PoolAccountsProvider>
+                    <AccountProvider>
+                      <AuthProvider>
+                        <QuoteProvider>
+                          <ModalProvider>{children}</ModalProvider>
+                        </QuoteProvider>
+                      </AuthProvider>
+                    </AccountProvider>
+                  </PoolAccountsProvider>
+                </ChainProvider>
+              </SnSdkProvider>
             </StarknetProvider>
           </CircuitProvider>
         </NotificationProvider>

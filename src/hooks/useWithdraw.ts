@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { generateMerkleProof, StarknetAddress, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
-// import { getConfig } from '~/config';
 import { parseUnits } from 'viem/utils';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -19,12 +18,11 @@ import {
   getMerkleProof,
   verifyWithdrawalProof,
   prepareWithdrawalProofInput,
-  createWithdrawalSecrets,
   waitForEvents,
   getScope,
   getDeposits,
 } from '~/utils';
-import { useSdk } from './useSdkWorker';
+import { useSdk } from './useWorkerSdk';
 
 const PRIVACY_POOL_ERRORS = {
   'Error: InvalidProof()': 'Failed to verify withdrawal proof. Please regenerate your proof and try again.',
@@ -48,7 +46,8 @@ const PRIVACY_POOL_ERRORS = {
 export const useWithdraw = () => {
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
-  const { withdraw: sdkWithdraw } = useSdk();
+  const { withdraw: sdkWithdraw, createWithdrawalSecrets } = useSdk();
+  const { chain } = useChainContext();
   const { setModalOpen, setIsClosable } = useModal();
   const { aspData, relayerData } = useExternalServices();
   const { resetQuote, quoteState } = useQuoteContext();
@@ -59,7 +58,7 @@ export const useWithdraw = () => {
     selectedRelayer,
   } = useChainContext();
 
-  const { accountService, addWithdrawal } = useAccountContext();
+  const { addWithdrawal, seed } = useAccountContext();
 
   const {
     amount,
@@ -198,8 +197,6 @@ export const useWithdraw = () => {
       //   throw new Error('No valid quote available. Please ensure you have a valid quote before withdrawing.');
       // }
 
-      // if (TEST_MODE) return;
-
       const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
       const missingFields = [];
@@ -210,8 +207,7 @@ export const useWithdraw = () => {
       // if (!stateLeaves) missingFields.push('stateLeaves');
       if (!relayerDetails) missingFields.push('relayerDetails');
       if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
-      // if (!feeBPSForWithdraw) missingFields.push('feeBPS');
-      if (!accountService) missingFields.push('accountService');
+      if (!feeBPSForWithdraw) missingFields.push('feeBPS');
 
       if (missingFields.length > 0) {
         console.error('❌ Missing required data for proof generation:', missingFields);
@@ -240,11 +236,11 @@ export const useWithdraw = () => {
         // relayerAddressToUse = address!;
         throw new Error('Relayer details not available');
       }
+      if (!seed) {
+        throw new Error('Seed missing.');
+      }
       if (!commitment) {
         throw new Error('Commitment not available');
-      }
-      if (!accountService) {
-        throw new Error('Account service not available');
       }
       if (!stateLeaves) {
         sateLeavesToUse = deposits.map((a) => a.commitment);
@@ -269,11 +265,11 @@ export const useWithdraw = () => {
           selectedPoolInfo,
         );
 
-        poolScope = await getScope(selectedPoolInfo);
+        poolScope = selectedPoolInfo.scope;
         stateMerkleProof = generateMerkleProof(sateLeavesToUse, commitment.hash);
         aspMerkleProof = generateMerkleProof(aspLeavesToUse, commitment.label);
         const context = await getContext(newWithdrawal, poolScope);
-        const { secret, nullifier } = createWithdrawalSecrets(accountService, commitment);
+        const { secret, nullifier } = await createWithdrawalSecrets({ commitment, seed, chain });
 
         aspMerkleProof.index = Object.is(aspMerkleProof.index, NaN) ? 0 : aspMerkleProof.index; // workaround for NaN index, SDK issue
 
@@ -330,12 +326,14 @@ export const useWithdraw = () => {
       poolAccount,
       target,
       commitment,
-      accountService,
       aspLeaves,
       stateLeaves,
       feeBPSForWithdraw,
       selectedPoolInfo,
+      seed,
       selectedRelayer?.url,
+      createWithdrawalSecrets,
+      chain,
       amount,
       decimals,
       sdkWithdraw,
@@ -366,8 +364,7 @@ export const useWithdraw = () => {
         !target ||
         !relayerDetails ||
         !relayerDetails.relayerAddress ||
-        !currentNewSecretKeys ||
-        !accountService
+        !currentNewSecretKeys
       )
         throw new Error('Missing required data to withdraw');
 
@@ -396,7 +393,7 @@ export const useWithdraw = () => {
         setTransactionHash(txHash);
         setModalOpen(ModalType.PROCESSING);
 
-        addWithdrawal(accountService, {
+        addWithdrawal({
           parentCommitment: commitment,
           value: poolAccount?.balance - withdrawnValue,
           nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
@@ -450,7 +447,6 @@ export const useWithdraw = () => {
       relayersData,
       commitment,
       target,
-      accountService,
       selectedPoolInfo,
       setIsClosable,
       selectedRelayer?.url,

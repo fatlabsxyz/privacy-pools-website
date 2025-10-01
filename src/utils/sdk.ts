@@ -20,7 +20,7 @@ import {
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { AbiEventName } from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
 import { Call, RpcProvider } from 'starknet';
-import { ChainData, chainData, PoolInfo, whitelistedChains } from '~/config';
+import { chainData, CompletePoolInfo, PoolInfo, whitelistedChains } from '~/config';
 import { PoolAccount, ReviewStatus, WithdrawalRelayerPayload } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
 import { delay } from './promises';
@@ -28,10 +28,6 @@ import { delay } from './promises';
 const chainDataByWhitelistedChains = Object.values(chainData).filter(
   (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id.toString() === chain.poolInfo[0].chainId),
 );
-
-const poolsByChain = chainDataByWhitelistedChains.flatMap(
-  (chain) => chain.poolInfo,
-) as ChainData[keyof ChainData]['poolInfo'];
 
 // Lazy load circuits only when needed
 let circuits: Circuits | null = null;
@@ -41,7 +37,7 @@ interface ISNContractProps {
   entryPoint: StarknetAddress;
 }
 
-const initializeSDK = () => {
+export const initializeSDK = () => {
   if (!circuits) {
     // Ensure we have a valid baseUrl (client-side only)
     const currentBaseUrl = globalThis?.location.origin;
@@ -53,8 +49,6 @@ const initializeSDK = () => {
   }
   return sdk!;
 };
-
-const pools: (PoolInfo & { scope: Hash })[] = poolsByChain as never;
 
 const chain = chainDataByWhitelistedChains[0];
 export const snRpcProvider = new RpcProvider({
@@ -100,8 +94,15 @@ export const verifyRagequitProof = async ({ proof, publicSignals }: CommitmentPr
  * @returns Promise resolving to withdrawal payload
  * @throws {ProofError} If proof generation fails
  */
-export const generateWithdrawalProof = async (commitment: AccountCommitment, input: WithdrawalProofInput) => {
-  const sdkInstance = initializeSDK();
+export const generateWithdrawalProof = async ({
+  commitment,
+  input,
+  sdkInstance,
+}: {
+  commitment: AccountCommitment;
+  input: WithdrawalProofInput;
+  sdkInstance: PrivacyPoolStarknetSDK;
+}) => {
   return await sdkInstance.proveWithdrawalSN(
     {
       preimage: {
@@ -145,7 +146,7 @@ export const relay = async ({
   return contract.relay(withdraw, proof, scope);
 };
 
-export const getScope = async (poolInfo: PoolInfo) => {
+export const getScope = async (poolInfo: Pick<PoolInfo, 'entryPointAddress' | 'address'>) => {
   const sdk = initializeSDK();
   const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, snRpcProvider as never);
   return toAddress(await contract.getScope(poolInfo.address));
@@ -171,14 +172,14 @@ export const createAccount = (seed: string) => {
   return accountService;
 };
 
-export const loadAccount = async (seed: string) => {
+export const loadAccount = async ({ seed, pools }: { seed: string; pools: CompletePoolInfo[] }) => {
   // const { account } = await AccountService.initializeWithEvents(dataService as never, { mnemonic: seed }, pools);
   const account = new AccountService(dataService as never, { mnemonic: seed });
-  await account.retrieveHistory(pools as (PoolInfo & { chainId: number; scope: bigint })[]);
+  await account.retrieveHistory(pools as never);
   return account;
 };
 
-export const createDepositSecrets = (accountService: AccountService, scope: Hash, index: bigint) => {
+export const createDepositSecrets = (accountService: AccountService, scope: Hash, index?: bigint) => {
   return accountService.createDepositSecrets(scope, index);
 };
 
@@ -213,7 +214,7 @@ export const waitForEvents = async <T extends keyof typeof AbiEventName>(
     const txEvents = await dataService.getTxEvents(
       AbiEventName[event],
       txHash,
-      poolInfo as PoolInfo & { chainId: number; scope: bigint },
+      poolInfo as PoolInfo & { chainId: number; scope: Hash },
     );
     if (txEvents.length === 0) {
       throw new Error(`Transaction for hash "${txHash}" not found in pool address "${poolInfo.address}".`);
@@ -332,21 +333,21 @@ export const addRagequit = async (
   return accountService.addRagequitToAccount(ragequitParams.label, ragequitParams.ragequit);
 };
 
-export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, chainId: string) => {
+export const getPoolAccountsFromAccount = async (
+  account: PrivacyPoolAccount,
+  chainId: string,
+  provider: RpcProvider,
+) => {
   const paMap = account.poolAccounts.entries();
   const poolAccounts = [];
 
   for (const [_scope, _poolAccounts] of paMap) {
-    const scope = _scope as unknown as StarknetAddress;
+    const scope = _scope;
     let idx = 1;
 
     for (const poolAccount of _poolAccounts) {
       const lastCommitment =
         poolAccount.children.length > 0 ? poolAccount.children[poolAccount.children.length - 1] : poolAccount.deposit;
-
-      const _chainId = Object.keys(chainData).find((key) =>
-        chainData[key].poolInfo.some((pool) => pool.scope === scope),
-      );
 
       const updatedPoolAccount = {
         ...(poolAccount as PoolAccount),
@@ -355,18 +356,18 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
         reviewStatus: ReviewStatus.PENDING,
         isValid: false,
         name: idx,
-        scope,
-        chainId: _chainId!,
+        scope: toAddress(scope),
+        chainId,
       };
 
       updatedPoolAccount.deposit.timestamp = await getTimestampFromBlockNumber(
         poolAccount.deposit.blockNumber,
-        snRpcProvider,
+        provider,
       );
 
       if (updatedPoolAccount.children.length > 0) {
         updatedPoolAccount.children.forEach(async (child) => {
-          child.timestamp = await getTimestampFromBlockNumber(child.blockNumber, snRpcProvider);
+          child.timestamp = await getTimestampFromBlockNumber(child.blockNumber, provider);
         });
       }
 
@@ -389,7 +390,14 @@ export const getPoolAccountsFromAccount = async (account: PrivacyPoolAccount, ch
 
   const poolAccountsByChainScope = poolAccounts.reduce(
     (acc, curr) => {
-      acc[`${curr.chainId}-${curr.scope}`] = [...(acc[`${curr.chainId}-${curr.scope}`] || []), curr];
+      const currentScope = toAddress(curr.scope);
+      acc[`${curr.chainId}-${currentScope}`] = [
+        ...(acc[`${curr.chainId}-${currentScope}`] || []),
+        {
+          ...curr,
+          scope: currentScope,
+        },
+      ];
       return acc;
     },
     {} as Record<string, PoolAccount[]>,

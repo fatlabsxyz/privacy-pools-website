@@ -87,7 +87,7 @@ export const PoolAccountsPreview = () => {
               justifyContent='flex-end'
             >
               {previewPoolAccounts.length > 0 && (
-                <ViewAllButton onClick={handleShowEmptyPools} disabled={!poolsByAssetAndChain.length}>
+                <ViewAllButton onClick={handleShowEmptyPools} disabled={!poolsByAssetAndChain?.length}>
                   <ViewAllText>{hideEmptyPools ? 'Show' : 'Hide'} empty pools</ViewAllText>
                 </ViewAllButton>
               )}

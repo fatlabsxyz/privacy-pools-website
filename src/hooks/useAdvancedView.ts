@@ -41,7 +41,7 @@ export const useAdvancedView = () => {
   const orderedPersonalActivity = useMemo(
     () =>
       historyData
-        .filter((account) => account.scope === selectedPoolInfo.scope)
+        .filter((account) => BigInt(account.scope) === BigInt(selectedPoolInfo.scope))
         .sort((a, b) => b.timestamp - a.timestamp),
     [historyData, selectedPoolInfo.scope],
   );
@@ -57,7 +57,7 @@ export const useAdvancedView = () => {
   const orderedPoolAccounts = useMemo(
     () =>
       [...filteredPoolAccounts]
-        .filter((account) => account.scope === selectedPoolInfo.scope)
+        .filter((account) => BigInt(account.scope) === BigInt(selectedPoolInfo.scope))
         .sort((a, b) => Number(b.deposit.timestamp || 0) - Number(a.deposit.timestamp || 0)),
     [filteredPoolAccounts, selectedPoolInfo.scope],
   );
