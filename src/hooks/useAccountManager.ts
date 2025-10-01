@@ -1,33 +1,22 @@
 'use client';
 
 import { useCallback } from 'react';
+import { toAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { ChainData } from '~/config';
 import { PoolAccount } from '~/types';
-// import { createAccount as sdkCreateAccount } from '~/utils';
 import { useSdk } from './useWorkerSdk';
 
 export function useAccountManager(
-  // setSeed: (seed: string) => void,
+  setSeed: (seed: string) => void,
   setPoolAccounts: (poolAccounts: PoolAccount[]) => void,
   setPoolAccountsByChainScope: (poolAccountsByChainScope: Record<string, PoolAccount[]>) => void,
-  // accountServiceRef: RefObject<AccountService | null>,
 ) {
   const { loadAccounts } = useSdk();
-  // const createAccount = useCallback(
-  //   (_seed: string) => {
-  //     if (!_seed) throw new Error('Seed not found');
-
-  //     const _accountService = sdkCreateAccount(_seed);
-  //     setSeed(_seed);
-  //     accountServiceRef.current = _accountService;
-  //   },
-  //   [setSeed, accountServiceRef],
-  // );
 
   const loadChainAccounts = useCallback(
     async ({ seed, chain, refetch = true }: { seed: string; chain: ChainData[string]; refetch?: boolean }) => {
       const { poolAccounts, poolAccountsByChainScope } = await loadAccounts({ seed, chain, refetch });
-      setPoolAccounts(poolAccounts);
+      setPoolAccounts(poolAccounts.map((account) => ({ ...account, scope: toAddress(account.scope) })));
       setPoolAccountsByChainScope(poolAccountsByChainScope);
 
       return { poolAccounts, poolAccountsByChainScope };
@@ -36,8 +25,11 @@ export function useAccountManager(
   );
 
   const createAccount = useCallback(
-    async (seed: string, chain: ChainData[string]) => loadChainAccounts({ seed, chain, refetch: false }),
-    [loadChainAccounts],
+    async (seed: string, chain: ChainData[string]) => {
+      await loadChainAccounts({ seed, chain, refetch: false });
+      setSeed(seed);
+    },
+    [loadChainAccounts, setSeed],
   );
 
   return { loadChainAccounts, createAccount };

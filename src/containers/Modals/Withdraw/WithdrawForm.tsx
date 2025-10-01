@@ -55,7 +55,7 @@ export const WithdrawForm = () => {
   } = useChainContext();
 
   const { amount, setAmount, target, setTarget, poolAccount, setPoolAccount } = usePoolAccountsContext();
-  const { poolAccounts } = useAccountContext();
+  const { poolsByAssetAndChain: poolAccounts } = useAccountContext();
 
   const decimals = selectedPoolInfo?.assetDecimals ?? balanceDecimals ?? 18;
   const filteredPoolAccounts = poolAccounts.filter((pa) => pa.balance > 0n);

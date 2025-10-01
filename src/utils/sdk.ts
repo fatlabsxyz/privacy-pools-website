@@ -342,7 +342,7 @@ export const getPoolAccountsFromAccount = async (
   const poolAccounts = [];
 
   for (const [_scope, _poolAccounts] of paMap) {
-    const scope = _scope as unknown as StarknetAddress;
+    const scope = _scope;
     let idx = 1;
 
     for (const poolAccount of _poolAccounts) {
@@ -356,7 +356,7 @@ export const getPoolAccountsFromAccount = async (
         reviewStatus: ReviewStatus.PENDING,
         isValid: false,
         name: idx,
-        scope,
+        scope: toAddress(scope),
         chainId,
       };
 
@@ -390,7 +390,14 @@ export const getPoolAccountsFromAccount = async (
 
   const poolAccountsByChainScope = poolAccounts.reduce(
     (acc, curr) => {
-      acc[`${curr.chainId}-${curr.scope}`] = [...(acc[`${curr.chainId}-${curr.scope}`] || []), curr];
+      const currentScope = toAddress(curr.scope);
+      acc[`${curr.chainId}-${currentScope}`] = [
+        ...(acc[`${curr.chainId}-${currentScope}`] || []),
+        {
+          ...curr,
+          scope: currentScope,
+        },
+      ];
       return acc;
     },
     {} as Record<string, PoolAccount[]>,

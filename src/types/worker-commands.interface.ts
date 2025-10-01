@@ -120,39 +120,39 @@ export interface DepositSecretsCreated {
   payload: ReturnType<typeof createDepositSecrets>;
 }
 
-export type AddPoolAccountCommand = Parameters<typeof addPoolAccount>[1] & {
+export interface AddPoolAccountCommand {
   type: 'addPool';
-};
+  payload: Parameters<typeof addPoolAccount>[1] & AccountRetrievalData;
+}
 
-export type AddWithdrawalCommand = Parameters<typeof addWithdrawal>[1] & {
+export interface AddWithdrawalCommand {
   type: 'addWithdrawal';
-};
+  payload: Parameters<typeof addWithdrawal>[1] & AccountRetrievalData;
+}
 
-export type AddRagequitCommand = Parameters<typeof addRagequit>[1] & {
+export interface AddRagequitCommand {
   type: 'addRagequit';
-};
-
-export interface AccountModificationCommand {
-  type: 'modifyAccount';
-  payload: AccountRetrievalData & (AddPoolAccountCommand | AddWithdrawalCommand | AddRagequitCommand);
+  payload: Parameters<typeof addRagequit>[1] & AccountRetrievalData;
 }
 
-export type AddPoolAccountResponse = ReturnType<typeof addPoolAccount> & {
-  type: 'poolAdded';
-};
+type AccountModificationCommands = AddPoolAccountCommand | AddWithdrawalCommand | AddRagequitCommand;
 
-export type AddWithdrawalResponse = Awaited<ReturnType<typeof addWithdrawal>> & {
-  type: 'withdrawalAdded';
-};
-
-export type AddRagequitResponse = Awaited<ReturnType<typeof addRagequit>> & {
-  type: 'ragequitAdded';
-};
-
-export interface AccountModified {
-  type: 'accountModified';
-  payload: AddPoolAccountResponse | AddWithdrawalResponse | AddRagequitResponse;
+export interface AddPoolAccountResponse {
+  type: 'addPool';
+  payload: ReturnType<typeof addPoolAccount>;
 }
+
+export interface AddWithdrawalResponse {
+  type: 'addWithdrawal';
+  payload: Awaited<ReturnType<typeof addWithdrawal>>;
+}
+
+export interface AddRagequitResponse {
+  type: 'addRagequit';
+  payload: Awaited<ReturnType<typeof addRagequit>>;
+}
+
+type AccountModificationRespones = AddPoolAccountResponse | AddWithdrawalResponse | AddRagequitResponse;
 
 export type WorkerMessages = { id: string } & (
   | WithdrawalProved
@@ -161,7 +161,7 @@ export type WorkerMessages = { id: string } & (
   | ChainAccountsLoaded
   | PoolsCompleteInfoResponse
   | DepositSecretsCreated
-  | AccountModified
+  | AccountModificationRespones
   | WithdrawalSecretsCreated
 );
 
@@ -174,7 +174,8 @@ export type WorkerCommands = {
   | LoadChainAccountsCommand
   | GetPoolsCompleteInfoCommand
   | CreateDepositSecretsCommand
-  | AccountModificationCommand
+  | AccountModificationCommands
+  | CreateWithdrawSecretsCommand
 );
 
 export type WorkerCommandsTypes = WorkerCommands['type'];

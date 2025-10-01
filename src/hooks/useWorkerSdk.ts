@@ -4,11 +4,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import {
   AccountRetrievalData,
   AddPoolAccountCommand,
-  AddPoolAccountResponse,
   AddRagequitCommand,
-  AddRagequitResponse,
   AddWithdrawalCommand,
-  AddWithdrawalResponse,
   CreateDepositSecretsCommand,
   CreateWithdrawSecretsCommand,
   GetPoolsCompleteInfoCommand,
@@ -126,46 +123,37 @@ export const useSdk = () => {
   );
 
   const addPoolAccount = useCallback(
-    async (payload: Omit<AddPoolAccountCommand, 'type'> & AccountRetrievalData) => {
-      const result = waitForSdkMessage('accountModified');
+    async (payload: AddPoolAccountCommand['payload'] & AccountRetrievalData) => {
+      const result = waitForSdkMessage('addPool');
       sendWorkerCommand({
-        type: 'modifyAccount',
-        payload: {
-          ...payload,
-          type: 'addPool',
-        },
+        type: 'addPool',
+        payload,
       });
-      return (await result).payload as AddPoolAccountResponse;
+      return (await result).payload;
     },
     [sendWorkerCommand, waitForSdkMessage],
   );
 
   const addRagequit = useCallback(
-    async (payload: Omit<AddRagequitCommand, 'type'> & AccountRetrievalData) => {
-      const result = waitForSdkMessage('accountModified');
+    async (payload: AddRagequitCommand['payload'] & AccountRetrievalData) => {
+      const result = waitForSdkMessage('addRagequit');
       sendWorkerCommand({
-        type: 'modifyAccount',
-        payload: {
-          ...payload,
-          type: 'addRagequit',
-        },
+        type: 'addRagequit',
+        payload,
       });
-      return (await result).payload as AddRagequitResponse;
+      return (await result).payload;
     },
     [sendWorkerCommand, waitForSdkMessage],
   );
 
   const addWithdrawal = useCallback(
-    async (payload: Omit<AddWithdrawalCommand, 'type'> & AccountRetrievalData) => {
-      const result = waitForSdkMessage('accountModified');
+    async (payload: AddWithdrawalCommand['payload'] & AccountRetrievalData) => {
+      const result = waitForSdkMessage('addWithdrawal');
       sendWorkerCommand({
-        type: 'modifyAccount',
-        payload: {
-          ...payload,
-          type: 'addWithdrawal',
-        },
+        type: 'addWithdrawal',
+        payload,
       });
-      return (await result).payload as AddWithdrawalResponse;
+      return (await result).payload;
     },
     [sendWorkerCommand, waitForSdkMessage],
   );
@@ -174,7 +162,7 @@ export const useSdk = () => {
     async (payload: CreateWithdrawSecretsCommand['payload']) => {
       const secrets = waitForSdkMessage('withdrawalSecretsCreated');
       sendWorkerCommand({
-        type: 'createDepositSecrets',
+        type: 'createWithdrawSecrets',
         payload,
       });
       return (await secrets).payload;

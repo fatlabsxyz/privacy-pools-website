@@ -12,6 +12,7 @@ import {
   addRagequit,
   addWithdrawal,
   createDepositSecrets,
+  createWithdrawalSecrets,
   deposit,
   generateWithdrawalProof,
   getPoolAccountsFromAccount,
@@ -19,7 +20,7 @@ import {
   rageQuit,
 } from '~/utils';
 import {
-  AccountModified,
+  // AccountRetrievalData,
   LoadChainAccountsCommand,
   WorkerCommands,
   WorkerMessages,
@@ -109,6 +110,20 @@ const loadChainAccounts = async ({
   return getPoolAccountsFromAccount(accountService.account, chainId, provider);
 };
 
+// const getAspLeaves = async ({ chain: { rpcUrl, poolInfo }, seed }: AccountRetrievalData) => {
+//   const accountService = loadAccountsService(rpcUrl, seed);
+//   const allEventsPromises = poolInfo.map((pool) =>
+//     accountService.getDepositEvents({ ...pool, chainId: +pool.chainId, scope: BigInt(pool.scope) as Hash }),
+//   );
+//   const depositLabels = (await Promise.allSettled(allEventsPromises))
+//     .map((p) => (p.status === 'fulfilled' ? [...p.value.values()] : []))
+//     .flat()
+//     .sort((a, b) => Number(a.blockNumber) - Number(b.blockNumber))
+//     .map(({ label }) => label);
+
+//   return depositLabels;
+// };
+
 self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
   const command = event.data;
   const { id, type } = command;
@@ -120,6 +135,17 @@ self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
         type: 'withdrawalProved',
         payload: proof,
         id: id,
+      });
+      break;
+    }
+    case 'createWithdrawSecrets': {
+      const { chain, seed, commitment } = command.payload;
+      const account = loadAccountsService(chain.rpcUrl, seed);
+      const secrets = createWithdrawalSecrets(account, commitment);
+      sendResponse({
+        type: 'withdrawalSecretsCreated',
+        payload: secrets,
+        id,
       });
       break;
     }
@@ -174,45 +200,38 @@ self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
       });
       break;
     }
-
-    case 'modifyAccount': {
-      const actualCommand = command.payload;
-      const {
-        seed,
-        chain: { rpcUrl },
-      } = actualCommand;
-      const accountService = loadAccountsService(rpcUrl, seed);
-      let result: AccountModified['payload'];
-      switch (actualCommand.type) {
-        case 'addPool':
-          result = { type: 'poolAdded', ...addPoolAccount(accountService, actualCommand) };
-          break;
-        case 'addRagequit':
-          result = { type: 'ragequitAdded', ...addRagequit(accountService, actualCommand) };
-          break;
-        case 'addWithdrawal':
-          result = { type: 'withdrawalAdded', ...addWithdrawal(accountService, actualCommand) };
-          break;
-      }
+    case 'addPool': {
+      const { chain, seed } = command.payload;
+      const accountService = loadAccountsService(chain.rpcUrl, seed);
+      const payload = addPoolAccount(accountService, command.payload);
       sendResponse({
-        payload: result,
-        type: 'accountModified',
         id,
+        type: 'addPool',
+        payload,
       });
       break;
     }
-    // case 'switchChain': {
-    //   const { address, entryPointAddress, chainId, rpcUrl, seed } = command.payload;
-
-    //   const provider = new RpcProvider({ nodeUrl: rpcUrl });
-    //   const dataService = new StarknetDataService(provider);
-    //   const accountService = new AccountService(dataService as never, { mnemonic: seed });
-    //   const contract = sdk.createSNContractInstance(entryPointAddress, provider);
-    //   const poolAbstractions: PoolAbstractions = {
-    //     contract,
-    //     accountService,
-    //     dataService,
-    //   };
-    // }
+    case 'addRagequit': {
+      const { chain, seed } = command.payload;
+      const accountService = loadAccountsService(chain.rpcUrl, seed);
+      const payload = await addRagequit(accountService, command.payload);
+      sendResponse({
+        id,
+        type: 'addRagequit',
+        payload,
+      });
+      break;
+    }
+    case 'addWithdrawal': {
+      const { chain, seed } = command.payload;
+      const accountService = loadAccountsService(chain.rpcUrl, seed);
+      const payload = await addWithdrawal(accountService, command.payload);
+      sendResponse({
+        id,
+        type: 'addWithdrawal',
+        payload,
+      });
+      break;
+    }
   }
 };

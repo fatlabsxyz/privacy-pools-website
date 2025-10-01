@@ -29,9 +29,9 @@ type ContextType = {
 
   createAccount: (seed: string, chain: ChainData[string]) => Promise<unknown>;
   loadAccount: (seed: string) => Promise<void>;
-  addPoolAccount: (params: Omit<AddPoolAccountCommand, 'type'>) => void;
-  addWithdrawal: (params: Omit<AddWithdrawalCommand, 'type'>) => void;
-  addRagequit: (params: Omit<AddRagequitCommand, 'type'>) => void;
+  addPoolAccount: (params: Omit<AddPoolAccountCommand['payload'], 'seed' | 'chain'>) => void;
+  addWithdrawal: (params: Omit<AddWithdrawalCommand['payload'], 'seed' | 'chain'>) => void;
+  addRagequit: (params: Omit<AddRagequitCommand['payload'], 'seed' | 'chain'>) => void;
   resetGlobalState: () => void;
 
   allPools: number;
@@ -65,7 +65,7 @@ export const AccountProvider = ({ children }: Props) => {
   } = useExternalServices();
   const { poolAccount, setPoolAccount } = usePoolAccountsContext();
 
-  const { loadChainAccounts, createAccount } = useAccountManager(setPoolAccounts, setPoolAccountsByChainScope);
+  const { loadChainAccounts, createAccount } = useAccountManager(setSeed, setPoolAccounts, setPoolAccountsByChainScope);
 
   const allPools = poolAccounts.length;
 
@@ -216,7 +216,7 @@ export const AccountProvider = ({ children }: Props) => {
   );
 
   const handleAddRagequit = useCallback(
-    (params: Omit<AddRagequitCommand, 'type'>) => {
+    (params: Omit<AddRagequitCommand['payload'], 'seed' | 'chain'>) => {
       if (!seed) {
         throw new Error('Missing Seed.');
       }

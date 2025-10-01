@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { generateMerkleProof, StarknetAddress, WithdrawalProof } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { addBreadcrumb } from '@sentry/nextjs';
-// import { getConfig } from '~/config';
 import { parseUnits } from 'viem/utils';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -59,7 +58,7 @@ export const useWithdraw = () => {
     selectedRelayer,
   } = useChainContext();
 
-  const { accountService, addWithdrawal, seed } = useAccountContext();
+  const { addWithdrawal, seed } = useAccountContext();
 
   const {
     amount,
@@ -198,8 +197,6 @@ export const useWithdraw = () => {
       //   throw new Error('No valid quote available. Please ensure you have a valid quote before withdrawing.');
       // }
 
-      // if (TEST_MODE) return;
-
       const relayerDetails = relayersData.find((r) => r.url === selectedRelayer?.url);
 
       const missingFields = [];
@@ -210,8 +207,7 @@ export const useWithdraw = () => {
       // if (!stateLeaves) missingFields.push('stateLeaves');
       if (!relayerDetails) missingFields.push('relayerDetails');
       if (!relayerDetails?.relayerAddress) missingFields.push('relayerAddress');
-      // if (!feeBPSForWithdraw) missingFields.push('feeBPS');
-      if (!accountService) missingFields.push('accountService');
+      if (!feeBPSForWithdraw) missingFields.push('feeBPS');
 
       if (missingFields.length > 0) {
         console.error('❌ Missing required data for proof generation:', missingFields);
@@ -245,9 +241,6 @@ export const useWithdraw = () => {
       }
       if (!commitment) {
         throw new Error('Commitment not available');
-      }
-      if (!accountService) {
-        throw new Error('Account service not available');
       }
       if (!stateLeaves) {
         sateLeavesToUse = deposits.map((a) => a.commitment);
@@ -333,7 +326,6 @@ export const useWithdraw = () => {
       poolAccount,
       target,
       commitment,
-      accountService,
       aspLeaves,
       stateLeaves,
       feeBPSForWithdraw,
@@ -372,8 +364,7 @@ export const useWithdraw = () => {
         !target ||
         !relayerDetails ||
         !relayerDetails.relayerAddress ||
-        !currentNewSecretKeys ||
-        !accountService
+        !currentNewSecretKeys
       )
         throw new Error('Missing required data to withdraw');
 
@@ -456,7 +447,6 @@ export const useWithdraw = () => {
       relayersData,
       commitment,
       target,
-      accountService,
       selectedPoolInfo,
       setIsClosable,
       selectedRelayer?.url,

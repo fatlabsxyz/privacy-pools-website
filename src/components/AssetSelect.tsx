@@ -20,7 +20,7 @@ const ALL_TOKEN_OPTIONS: Option[] = [
   { value: 'USDC', label: 'USDC' },
   { value: 'wstETH', label: 'wstETH' },
   { value: 'wBTC', label: 'wBTC' },
-  { value: 'STRK', label: 'Starknet Token' },
+  { value: 'STRK', label: 'STRK' },
 ];
 
 const MENU_STYLING = {
