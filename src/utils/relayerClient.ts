@@ -1,9 +1,9 @@
-import { FeesResponse, RelayerResponse, QuoteRequestBody, QuoteResponse, SNRelayRequestBody } from '~/types';
+import { FeesResponse, RelayerResponse, QuoteRequestBody, SNRelayRequestBody, SNQuoteResponse } from '~/types';
 
 interface FetchClient {
   fetchFees: (relayerUrl: string, assetAddress: string) => Promise<FeesResponse>;
   relay: (relayerUrl: string, input: SNRelayRequestBody) => Promise<RelayerResponse>;
-  fetchQuote: (relayerUrl: string, input: QuoteRequestBody) => Promise<QuoteResponse>;
+  fetchQuote: (relayerUrl: string, input: QuoteRequestBody) => Promise<SNQuoteResponse>;
   ping: (relayerUrl: string) => Promise<null>;
 }
 

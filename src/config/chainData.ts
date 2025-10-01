@@ -84,9 +84,8 @@ const testnetChainData: ChainData = {
     rpcUrl: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${ALCHEMY_KEY}` as const,
     aspUrl: ASP_ENDPOINT,
     relayers: [
-      { name: 'Testnet Relay', url: 'https://testnet-relayer.privacypools.com' },
-      { name: 'Freedom Relay', url: 'https://fastrelay.xyz' },
-      { name: 'FatRelay', url: 'http://localhost:3000' },
+      // { name: 'FatRelayerLocal', url: 'http://localhost:3000' },
+      { name: 'FatRelayer', url: 'https://starknet-relayer-latest-149184580131.us-east1.run.app' },
     ],
     poolInfo: [
       {
@@ -94,7 +93,7 @@ const testnetChainData: ChainData = {
         asset: 'ETH' as const,
         assetAddress: toAddress('0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'),
         assetDecimals: 18,
-        address: toAddress('0x109d3f24af2d03634cb310ed7de9baeca8208667338f7714bf3b70f886e2dd9'),
+        address: toAddress('0x0109d3f24af2d03634cb310ed7de9baeca8208667338f7714bf3b70f886e2dd9'),
         scope: toAddress(0x4951be981d6c5ee34f0e825cad898caa01929fae272fa38ca7d1c9083c2933n),
         entryPointAddress: toAddress('0x6fe3b0c2d8b16dcb3aa50d97d63b6a149be8c96cdd0b451497be3d0a95b50e'),
         maxDeposit: parseEther('10'),

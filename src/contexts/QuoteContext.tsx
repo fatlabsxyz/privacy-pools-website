@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { FeeCommitment, SignedFeeCommitment } from '~/types';
+import { SignedFeeCommitment } from '~/types';
 
 interface QuoteState {
   quoteCommitment: SignedFeeCommitment | null;
@@ -43,7 +43,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
 
   const setQuoteData = useCallback(
     (
-      commitment: FeeCommitment,
+      commitment: SignedFeeCommitment,
       feeBPS: number,
       baseFeeBPS: number,
       extraGasAmountETH: string | null,
