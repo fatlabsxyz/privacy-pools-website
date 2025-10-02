@@ -29,7 +29,7 @@ export const PoolAccountSelectorSection = ({
         displayEmpty
       >
         {filteredPoolAccounts.map((value) => {
-          if (value.reviewStatus === ReviewStatus.APPROVED || true) {
+          if (value.reviewStatus === ReviewStatus.APPROVED) {
             return (
               <SMenuItem key={value.name} value={value.name.toString()}>
                 PA-{value.name}{' '}

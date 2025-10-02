@@ -10,32 +10,27 @@ import {
   AccountService,
   PrivacyPoolAccount,
   AccountCommitment,
-  StarknetDataService,
   PrivacyPoolStarknetSDK,
   getCommitment,
   computeContext,
   toAddress,
   StarknetAddress,
   Address,
+  SNContractInteractionsService,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
-import { AbiEventName } from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
-import { Call, RpcProvider } from 'starknet';
-import { chainData, CompletePoolInfo, PoolInfo, whitelistedChains } from '~/config';
-import { PoolAccount, ReviewStatus, WithdrawalRelayerPayload } from '~/types';
+import {
+  AbiEventName,
+  StarknetDataService,
+} from 'node_modules/@fatsolutions/privacy-pools-core-starknet-sdk/dist/data.service';
+import { RpcProvider } from 'starknet';
+import { PoolInfo } from '~/config';
+import { PoolAccount, ReviewStatus } from '~/types';
 import { getTimestampFromBlockNumber } from '~/utils';
 import { delay } from './promises';
-
-const chainDataByWhitelistedChains = Object.values(chainData).filter(
-  (chain) => chain.poolInfo.length > 0 && whitelistedChains.some((c) => c.id.toString() === chain.poolInfo[0].chainId),
-);
 
 // Lazy load circuits only when needed
 let circuits: Circuits | null = null;
 let sdk: PrivacyPoolStarknetSDK | null = null;
-
-interface ISNContractProps {
-  entryPoint: StarknetAddress;
-}
 
 export const initializeSDK = () => {
   if (!circuits) {
@@ -49,13 +44,6 @@ export const initializeSDK = () => {
   }
   return sdk!;
 };
-
-const chain = chainDataByWhitelistedChains[0];
-export const snRpcProvider = new RpcProvider({
-  nodeUrl: chain.rpcUrl,
-});
-
-const dataService = new StarknetDataService(snRpcProvider as never);
 
 /**
  * Generates a zero-knowledge proof for a commitment using Poseidon hash.
@@ -135,24 +123,26 @@ export const relay = async ({
   poolInfo,
   withdraw,
   proof,
+  rpcProvider,
 }: {
   poolInfo: PoolInfo;
   withdraw: Parameters<typeof getContext>[0];
   proof: bigint[];
+  rpcProvider: RpcProvider;
 }) => {
   const sdk = initializeSDK();
-  const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, snRpcProvider as never);
+  const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, rpcProvider);
   const scope = (await contract.getScope(poolInfo.address)) as Hash;
   return contract.relay(withdraw, proof, scope);
 };
 
-export const getScope = async (poolInfo: Pick<PoolInfo, 'entryPointAddress' | 'address'>) => {
+export const getScope = async (poolInfo: Pick<PoolInfo, 'entryPointAddress' | 'address'>, rpcProvider: RpcProvider) => {
   const sdk = initializeSDK();
-  const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, snRpcProvider as never);
+  const contract = sdk.createSNContractInstance(poolInfo.entryPointAddress, rpcProvider);
   return toAddress(await contract.getScope(poolInfo.address));
 };
 
-export const getDeposits = async (poolInfo: PoolInfo) => {
+export const getDeposits = async (poolInfo: PoolInfo, dataService: StarknetDataService) => {
   return dataService.getDeposits(poolInfo as never);
 };
 
@@ -161,22 +151,9 @@ export const getMerkleProof = async (leaves: bigint[], leaf: bigint) => {
 };
 
 export const verifyWithdrawalProof = async (proof: Awaited<ReturnType<typeof generateWithdrawalProof>>) => {
-  const sdkInstance = initializeSDK();
   return true;
+  const sdkInstance = initializeSDK();
   return await sdkInstance.verifyWithdrawal(proof as never);
-};
-
-export const createAccount = (seed: string) => {
-  const accountService = new AccountService(dataService as never, { mnemonic: seed });
-
-  return accountService;
-};
-
-export const loadAccount = async ({ seed, pools }: { seed: string; pools: CompletePoolInfo[] }) => {
-  // const { account } = await AccountService.initializeWithEvents(dataService as never, { mnemonic: seed }, pools);
-  const account = new AccountService(dataService as never, { mnemonic: seed });
-  await account.retrieveHistory(pools as never);
-  return account;
 };
 
 export const createDepositSecrets = (accountService: AccountService, scope: Hash, index?: bigint) => {
@@ -187,29 +164,19 @@ export const createWithdrawalSecrets = (accountService: AccountService, commitme
   return accountService.createWithdrawalSecrets(commitment);
 };
 
-export const deposit = async ({
-  amount,
-  token,
-  entryPoint,
-  precommitment,
-}: {
-  amount: bigint;
-  entryPoint: StarknetAddress;
-  token: StarknetAddress;
-  precommitment: bigint;
-}) => {
-  const sdk = initializeSDK();
-  const contract = sdk.createSNContractInstance(entryPoint, snRpcProvider as never);
-  const result = (await contract.approveAndDeposit(entryPoint, token, amount, precommitment)) as Call[];
-  return result;
-};
-
-export const waitForEvents = async <T extends keyof typeof AbiEventName>(
-  event: T,
-  txHash: string,
-  poolInfo: PoolInfo,
+export const waitForEvents = async <T extends keyof typeof AbiEventName>({
+  event,
+  txHash,
+  poolInfo,
+  dataService,
   maxRetries = 3,
-) => {
+}: {
+  event: T;
+  txHash: string;
+  poolInfo: PoolInfo;
+  dataService: StarknetDataService;
+  maxRetries?: number;
+}) => {
   const getTx = async () => {
     const txEvents = await dataService.getTxEvents(
       AbiEventName[event],
@@ -230,43 +197,28 @@ export const waitForEvents = async <T extends keyof typeof AbiEventName>(
   return tx;
 };
 
-export const withdraw = async ({
-  entryPoint,
-  withdrawalData,
-  withdrawalProof,
-  scope,
-}: {
-  amount: bigint;
-  entryPoint: StarknetAddress;
-  token: StarknetAddress;
-  precommitment: bigint;
-  withdrawalData: WithdrawalRelayerPayload;
-  withdrawalProof: bigint[];
-  scope: bigint;
-}) => {
-  const sdk = initializeSDK();
-  const contract = sdk.createSNContractInstance(entryPoint, snRpcProvider as never);
-  return contract.withdraw(withdrawalData, withdrawalProof, scope as Hash);
-};
+export interface RageQuitData {
+  value: bigint;
+  label: bigint;
+  secret: Secret;
+  nullifier: Secret;
+  poolAddress: StarknetAddress;
+}
 
 export const rageQuit = async ({
-  entryPoint,
   poolAddress,
   value,
   label,
   secret,
   nullifier,
-}: ISNContractProps & {
-  poolAddress: StarknetAddress;
-  value: bigint;
-  label: bigint;
-  secret: Secret;
-  nullifier: Secret;
+  contract,
+  sdkInstance,
+}: RageQuitData & {
+  contract: SNContractInteractionsService;
+  sdkInstance: PrivacyPoolStarknetSDK;
 }) => {
-  const sdk = initializeSDK();
-  const contract = sdk.createSNContractInstance(entryPoint, snRpcProvider as never);
   const commitment = getCommitment(value, label, nullifier, secret);
-  const { calldata } = await sdk.proveCommitmentSN(commitment);
+  const { calldata } = await sdkInstance.proveCommitmentSN(commitment);
   return contract.ragequit(calldata, poolAddress);
 };
 
@@ -379,7 +331,7 @@ export const getPoolAccountsFromAccount = async (
       if (updatedPoolAccount.ragequit) {
         updatedPoolAccount.ragequit.timestamp = await getTimestampFromBlockNumber(
           updatedPoolAccount.ragequit.blockNumber,
-          snRpcProvider,
+          provider,
         );
       }
 

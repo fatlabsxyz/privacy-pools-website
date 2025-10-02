@@ -5,16 +5,15 @@ import { addBreadcrumb } from '@sentry/nextjs';
 import { useSendTransaction, useAccount } from '@starknet-react/core';
 import { useChainContext, useAccountContext, useModal, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType } from '~/types';
-import { waitForEvents } from '~/utils';
 import { useSdk } from './useWorkerSdk';
 
 export const useExit = () => {
   const { address } = useAccount();
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const { sendAsync } = useSendTransaction({});
-  const { rageQuit } = useSdk();
+  const { rageQuit, fetchEvents } = useSdk();
   const { setModalOpen, setIsClosable } = useModal();
-  const { selectedPoolInfo } = useChainContext();
+  const { selectedPoolInfo, chain } = useChainContext();
   const { poolAccount, setTransactionHash } = usePoolAccountsContext();
   const { seed, addRagequit } = useAccountContext();
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +34,7 @@ export const useExit = () => {
         nullifier,
         secret,
         value,
+        chain,
       });
 
       const hash = (await sendAsync([rageQuitCall])).transaction_hash as `0x${string}`;
@@ -42,7 +42,14 @@ export const useExit = () => {
       setTransactionHash(hash);
       setModalOpen(ModalType.PROCESSING);
 
-      const receipts = await waitForEvents('Ragequit', hash, selectedPoolInfo as never, 5);
+      const receipts = await fetchEvents({
+        rpcUrl: chain.rpcUrl,
+        params: {
+          event: 'Ragequit',
+          txHash: hash,
+          poolInfo: selectedPoolInfo,
+        },
+      });
 
       if (!receipts.length) throw new Error('Receipt not found');
 
@@ -94,19 +101,20 @@ export const useExit = () => {
     setIsClosable(true);
     setIsLoading(false);
   }, [
+    setIsClosable,
     poolAccount,
     seed,
-    setIsClosable,
-    setIsLoading,
-    address,
+    rageQuit,
     selectedPoolInfo,
+    chain,
+    sendAsync,
     setTransactionHash,
     setModalOpen,
+    fetchEvents,
     addRagequit,
+    address,
     getDefaultErrorMessage,
     addNotification,
-    sendAsync,
-    rageQuit,
   ]);
 
   const generateProofAndExit = useCallback(async () => {

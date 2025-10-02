@@ -5,6 +5,8 @@ const {
   constants: { ITEMS_PER_PAGE },
 } = getConfig();
 
+const SCOPE_HEADER = 'X-Pool-Scope';
+
 const fetchJWT = async (): Promise<string> => {
   const response = await fetch('/api/token');
   if (!response.ok) throw new Error('Failed to get token');
@@ -12,8 +14,8 @@ const fetchJWT = async (): Promise<string> => {
   return token;
 };
 
-const fetchPublic = async <T>(url: string): Promise<T> => {
-  const response = await fetch(url);
+const fetchPublic = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(url, init);
 
   if (!response.ok) throw new Error(`Request failed: ${response.statusText}`);
   return response.json();
@@ -34,22 +36,32 @@ const fetchPrivate = async <T>(url: string, headers?: Record<string, string>): P
 };
 
 const aspClient = {
-  fetchPoolInfo: (aspUrl: string, chainId: number, scope: string) =>
-    fetchPublic<PoolResponse>(`${aspUrl}/${chainId}/public/pool-info/${scope}`),
+  fetchPoolInfo: (aspUrl: string, chainId: string, scope: string) =>
+    fetchPublic<PoolResponse>(`${aspUrl}/${chainId}/public/pool-info`, {
+      headers: {
+        [SCOPE_HEADER]: scope,
+      },
+    }),
 
-  fetchAllEvents: (aspUrl: string, chainId: number, scope: string, page = 1, perPage = ITEMS_PER_PAGE) =>
+  fetchAllEvents: (aspUrl: string, chainId: string, scope: string, page = 1, perPage = ITEMS_PER_PAGE) =>
     fetchPrivate<AllEventsResponse>(`${aspUrl}/${chainId}/private/events/${scope}?page=${page}&perPage=${perPage}`),
 
-  fetchDepositsByLabel: (aspUrl: string, chainId: number, scope: string, labels: string[]) =>
+  fetchDepositsByLabel: (aspUrl: string, chainId: string, scope: string, labels: string[]) =>
     fetchPrivate<DepositsByLabelResponse>(`${aspUrl}/${chainId}/private/deposits/${scope}`, {
       'X-labels': labels.join(','),
     }),
 
-  fetchMtRoots: (aspUrl: string, chainId: number, scope: string) =>
-    fetchPublic<MtRootResponse>(`${aspUrl}/${chainId}/public/mt-roots/${scope}`),
+  fetchMtRoots: (aspUrl: string, chainId: string, scope: string) =>
+    fetchPublic<MtRootResponse>(`${aspUrl}/${chainId}/public/mt-roots`, {
+      headers: {
+        [SCOPE_HEADER]: scope,
+      },
+    }),
 
-  fetchMtLeaves: (aspUrl: string, chainId: number, scope: string) =>
-    fetchPrivate<MtLeavesResponse>(`${aspUrl}/${chainId}/private/mt-leaves/${scope}`),
+  fetchMtLeaves: (aspUrl: string, chainId: string, scope: string) =>
+    fetchPrivate<MtLeavesResponse>(`${aspUrl}/${chainId}/public/mt-leaves`, {
+      [SCOPE_HEADER]: scope,
+    }),
 };
 
 export { aspClient };

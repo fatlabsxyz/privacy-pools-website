@@ -4,23 +4,31 @@ import {
   StarknetAddress,
   WithdrawalProofInput,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
-import { ChainData as ChainDictionary, CompletePoolInfo } from '~/config';
+import { Call } from 'starknet';
+import { ChainData as ChainDictionary, CompletePoolInfo, PoolInfo } from '~/config';
 import {
   addPoolAccount,
   addRagequit,
   addWithdrawal,
   createDepositSecrets,
   createWithdrawalSecrets,
-  deposit,
   getPoolAccountsFromAccount,
   rageQuit,
+  RageQuitData,
+  waitForEvents,
 } from '~/utils';
 
 type ChainData = ChainDictionary[string];
+type MinimalChainData = Pick<ChainData, 'rpcUrl'>;
 
 export interface AccountRetrievalData {
   seed: string;
-  chain: ChainData;
+  chain: MinimalChainData;
+}
+
+export interface ContractRetrievalData {
+  chain: MinimalChainData;
+  entryPoint: StarknetAddress;
 }
 
 export interface ZKProofWorkerMessage {
@@ -50,12 +58,17 @@ export interface WithdrawalProved {
 
 export interface ProveDepositCommand {
   type: 'generateDepositProve';
-  payload: Parameters<typeof deposit>[0];
+  payload: {
+    amount: bigint;
+    precommitment: bigint;
+    pool: Pick<PoolInfo, 'entryPointAddress' | 'assetAddress'>;
+    rpcUrl: string;
+  };
 }
 
 export interface DepositProved {
   type: 'depositProved';
-  payload: Awaited<ReturnType<typeof deposit>>;
+  payload: Call[];
 }
 
 export interface WorkerStarted {
@@ -64,7 +77,7 @@ export interface WorkerStarted {
 
 export interface ProveRageQuitCommand {
   type: 'generateRagequiteProve';
-  payload: Parameters<typeof rageQuit>[0];
+  payload: RageQuitData & ContractRetrievalData;
 }
 
 export interface RageQuitProved {
@@ -74,7 +87,7 @@ export interface RageQuitProved {
 
 export interface LoadChainAccountsCommand {
   type: 'loadAccounts';
-  payload: AccountRetrievalData & {
+  payload: AccountRetrievalData & { chain: { poolInfo: PoolInfo[] } } & {
     refetch?: boolean;
   };
 }
@@ -152,6 +165,16 @@ export interface AddRagequitResponse {
   payload: Awaited<ReturnType<typeof addRagequit>>;
 }
 
+export interface FetchEventsCommand {
+  type: 'fetchEvents';
+  payload: MinimalChainData & { params: Omit<Parameters<typeof waitForEvents>[0], 'dataService'> };
+}
+
+export interface FetchEventsResponse {
+  type: 'fetchEvents';
+  payload: Awaited<ReturnType<typeof waitForEvents>>;
+}
+
 type AccountModificationRespones = AddPoolAccountResponse | AddWithdrawalResponse | AddRagequitResponse;
 
 export type WorkerMessages = { id: string } & (
@@ -163,6 +186,7 @@ export type WorkerMessages = { id: string } & (
   | DepositSecretsCreated
   | AccountModificationRespones
   | WithdrawalSecretsCreated
+  | FetchEventsResponse
 );
 
 export type WorkerCommands = {
@@ -176,6 +200,7 @@ export type WorkerCommands = {
   | CreateDepositSecretsCommand
   | AccountModificationCommands
   | CreateWithdrawSecretsCommand
+  | FetchEventsCommand
 );
 
 export type WorkerCommandsTypes = WorkerCommands['type'];

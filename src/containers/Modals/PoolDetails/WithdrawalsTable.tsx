@@ -61,7 +61,7 @@ export const WithdrawalsTable = () => {
                   </STableCell>
 
                   {/* Value */}
-                  <STableCell>{formatUnits(row.amount as bigint, decimals)}</STableCell>
+                  <STableCell>{formatUnits(BigInt(row.amount), decimals)}</STableCell>
 
                   {/* To */}
                   {/* Temporarily disabled */}
