@@ -8,6 +8,7 @@ import {
   AddWithdrawalCommand,
   CreateDepositSecretsCommand,
   CreateWithdrawSecretsCommand,
+  FetchEventsCommand,
   GetPoolsCompleteInfoCommand,
   LoadChainAccountsCommand,
   ProveDepositCommand,
@@ -16,6 +17,7 @@ import {
   WorkerCommands,
   WorkerMessages,
 } from '~/types/worker-commands.interface';
+import { waitForEvents } from '~/utils';
 import { waitForMessage } from '~/utils/worker';
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
@@ -170,6 +172,20 @@ export const useSdk = () => {
     [sendWorkerCommand, waitForSdkMessage],
   );
 
+  const fetchEvents: <Event extends 'Deposit' | 'Withdraw' | 'Ragequit'>(
+    params: FetchEventsCommand['payload'] & { params: { event: Event } },
+  ) => ReturnType<typeof waitForEvents<Event>> = useCallback(
+    async (payload: FetchEventsCommand['payload']) => {
+      const secrets = waitForSdkMessage('fetchEvents');
+      sendWorkerCommand({
+        type: 'fetchEvents',
+        payload,
+      });
+      return (await secrets).payload;
+    },
+    [sendWorkerCommand, waitForSdkMessage],
+  ) as never;
+
   return {
     withdraw,
     deposit,
@@ -181,5 +197,6 @@ export const useSdk = () => {
     addRagequit,
     addWithdrawal,
     createWithdrawalSecrets,
+    fetchEvents,
   };
 };

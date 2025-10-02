@@ -5,7 +5,7 @@ import {
   Hash,
   StarknetAddress,
 } from '@fatsolutions/privacy-pools-core-starknet-sdk';
-import { RpcProvider } from 'starknet';
+import { Call, RpcProvider } from 'starknet';
 import { chainData, CompletePoolInfo, PoolInfo } from '~/config';
 import {
   addPoolAccount,
@@ -13,18 +13,13 @@ import {
   addWithdrawal,
   createDepositSecrets,
   createWithdrawalSecrets,
-  deposit,
   generateWithdrawalProof,
   getPoolAccountsFromAccount,
   initializeSDK,
   rageQuit,
+  waitForEvents,
 } from '~/utils';
-import {
-  // AccountRetrievalData,
-  LoadChainAccountsCommand,
-  WorkerCommands,
-  WorkerMessages,
-} from '../types/worker-commands.interface';
+import { LoadChainAccountsCommand, WorkerCommands, WorkerMessages } from '../types/worker-commands.interface';
 
 type PoolToRetrieveHistoryFrom = Omit<CompletePoolInfo, 'chainId' | 'scope'> & { chainId: number; scope: Hash };
 
@@ -35,6 +30,7 @@ const sendResponse = <T extends WorkerMessages>(message: T) => {
 const chainAccountsMap = new Map<string, AccountService>();
 const poolContractsMap = new Map<string, SNContractInteractionsService>();
 const chainProviderMap = new Map<string, RpcProvider>();
+const chainDataServiceMap = new Map<string, StarknetDataService>();
 const completePoolInfoMap = new Map<string, PoolToRetrieveHistoryFrom[]>();
 const sdkInstance = initializeSDK();
 
@@ -47,16 +43,24 @@ const loadProvider = (rpcUrl: string) => {
   return provider;
 };
 
+const loadDataService = (rpcUrl: string, provider?: RpcProvider) => {
+  let dataService = chainDataServiceMap.get(rpcUrl);
+  if (!dataService) {
+    dataService = new StarknetDataService(provider || loadProvider(rpcUrl));
+    chainDataServiceMap.set(rpcUrl, dataService);
+  }
+  return dataService;
+};
+
 const initAccountsService = (rpcUrl: string, seed: string) => {
-  const provider = loadProvider(rpcUrl);
-  const dataService = new StarknetDataService(provider);
+  const dataService = loadDataService(rpcUrl);
   const accountService = new AccountService(dataService as never, { mnemonic: seed });
   chainAccountsMap.set(rpcUrl + seed, accountService);
   return accountService;
 };
 
-const loadAccountsService = (rpcUrl: string, seed: string) => {
-  return chainAccountsMap.get(rpcUrl + seed) || initAccountsService(rpcUrl, seed);
+const loadAccountsService = (rpcUrl: string, seed: string, recreate = false) => {
+  return (!recreate && chainAccountsMap.get(rpcUrl + seed)) || initAccountsService(rpcUrl, seed);
 };
 
 const initPoolContract = (entryPoint: StarknetAddress, rpcUrl: string) => {
@@ -110,20 +114,6 @@ const loadChainAccounts = async ({
   return getPoolAccountsFromAccount(accountService.account, chainId, provider);
 };
 
-// const getAspLeaves = async ({ chain: { rpcUrl, poolInfo }, seed }: AccountRetrievalData) => {
-//   const accountService = loadAccountsService(rpcUrl, seed);
-//   const allEventsPromises = poolInfo.map((pool) =>
-//     accountService.getDepositEvents({ ...pool, chainId: +pool.chainId, scope: BigInt(pool.scope) as Hash }),
-//   );
-//   const depositLabels = (await Promise.allSettled(allEventsPromises))
-//     .map((p) => (p.status === 'fulfilled' ? [...p.value.values()] : []))
-//     .flat()
-//     .sort((a, b) => Number(a.blockNumber) - Number(b.blockNumber))
-//     .map(({ label }) => label);
-
-//   return depositLabels;
-// };
-
 self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
   const command = event.data;
   const { id, type } = command;
@@ -149,8 +139,33 @@ self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
       });
       break;
     }
+
+    case 'fetchEvents': {
+      const { rpcUrl, params } = command.payload;
+      const dataService = loadDataService(rpcUrl);
+      const events = await waitForEvents({ ...params, dataService });
+      sendResponse({
+        type: 'fetchEvents',
+        payload: events,
+        id,
+      });
+      break;
+    }
+
     case 'generateDepositProve': {
-      const payload = await deposit(command.payload);
+      const {
+        rpcUrl,
+        pool: { assetAddress, entryPointAddress },
+        amount,
+        precommitment,
+      } = command.payload;
+      const poolContract = loadPoolContract(entryPointAddress, rpcUrl);
+      const payload = (await poolContract.approveAndDeposit(
+        entryPointAddress,
+        assetAddress,
+        amount,
+        precommitment,
+      )) as Call[];
       sendResponse({
         type: 'depositProved',
         payload,
@@ -158,8 +173,20 @@ self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
       });
       break;
     }
+
     case 'generateRagequiteProve': {
-      const payload = await rageQuit(command.payload);
+      const {
+        poolAddress,
+        chain: { rpcUrl },
+        ...rageQuitPayload
+      } = command.payload;
+      const contract = loadPoolContract(poolAddress, rpcUrl);
+      const payload = await rageQuit({
+        ...rageQuitPayload,
+        poolAddress,
+        contract,
+        sdkInstance,
+      });
       sendResponse({
         type: 'rageQuitProved',
         payload,

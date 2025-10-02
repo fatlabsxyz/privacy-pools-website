@@ -6,7 +6,6 @@ import { useQueries } from '@tanstack/react-query';
 import { parseEther } from 'viem';
 import { ChainData, chainData, ChainAssets, whitelistedChains, PoolInfo, getConfig } from '~/config';
 import { useNotifications } from '~/hooks';
-import { useSdk } from '~/hooks/useWorkerSdk';
 import { fetchTokenPrice, relayerClient } from '~/utils';
 
 type RelayerDataType = {
@@ -52,7 +51,6 @@ const {
 export const ChainContext = createContext({} as ContextType);
 
 export const ChainProvider = ({ children }: Props) => {
-  const {} = useSdk();
   const { address } = useAccount();
   const [chainId, setChainId] = useState(whitelistedChains[0].id.toString());
   const { addNotification } = useNotifications();

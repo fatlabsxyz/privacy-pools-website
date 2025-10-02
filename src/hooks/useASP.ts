@@ -6,7 +6,7 @@ import { PoolResponse, MtRootResponse, DepositsByLabelResponse, AllEventsRespons
 import { aspClient } from '~/utils';
 
 export const useASP = (
-  chainId: number,
+  chainId: string,
   scope: string,
   aspUrl: string,
 ): {

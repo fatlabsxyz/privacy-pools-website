@@ -18,9 +18,6 @@ import {
   getMerkleProof,
   verifyWithdrawalProof,
   prepareWithdrawalProofInput,
-  waitForEvents,
-  getScope,
-  getDeposits,
 } from '~/utils';
 import { useSdk } from './useWorkerSdk';
 
@@ -46,7 +43,7 @@ const PRIVACY_POOL_ERRORS = {
 export const useWithdraw = () => {
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
-  const { withdraw: sdkWithdraw, createWithdrawalSecrets } = useSdk();
+  const { withdraw: sdkWithdraw, createWithdrawalSecrets, fetchEvents } = useSdk();
   const { chain } = useChainContext();
   const { setModalOpen, setIsClosable } = useModal();
   const { aspData, relayerData } = useExternalServices();
@@ -214,22 +211,22 @@ export const useWithdraw = () => {
         throw new Error(`Missing required data: ${missingFields.join(', ')}`);
       }
 
-      let aspLeavesToUse = aspLeaves?.map(BigInt) || [];
-      let sateLeavesToUse = stateLeaves?.map(BigInt) || [];
+      const aspLeavesToUse = aspLeaves?.map(BigInt) || [];
+      const stateLeavesToUse = stateLeaves?.map(BigInt) || [];
       const relayerAddressToUse: `0x${string}` = relayerDetails?.relayerAddress as never;
-      const feeBPSToUSe: string = feeBPSForWithdraw.toString() || '250';
-      const deposits = await getDeposits(selectedPoolInfo);
+      const feeBPSToUSe: string = feeBPSForWithdraw.toString();
+      // const deposits = await getDeposits(selectedPoolInfo);
 
-      const aspRootHasBeenUpdated = new Promise<void>((resolve) => {
-        const labels = deposits.map((d) => d.label).join(' ');
-        console.log('Copy these labels, update the ASP Root and then call "rootHasBeenUpdated". Labels:');
-        console.log(labels);
-        (window as unknown as { rootHasBeenUpdated: () => void }).rootHasBeenUpdated = () => {
-          resolve();
-        };
-      });
+      // const aspRootHasBeenUpdated = new Promise<void>((resolve) => {
+      //   const labels = deposits.map((d) => d.label).join(' ');
+      //   console.log('Copy these labels, update the ASP Root and then call "rootHasBeenUpdated". Labels:');
+      //   console.log(labels);
+      //   (window as unknown as { rootHasBeenUpdated: () => void }).rootHasBeenUpdated = () => {
+      //     resolve();
+      //   };
+      // });
 
-      await aspRootHasBeenUpdated;
+      // await aspRootHasBeenUpdated;
 
       // TypeScript assertions - we've already validated these exist above
       if (!relayerDetails || !relayerDetails.relayerAddress) {
@@ -243,12 +240,12 @@ export const useWithdraw = () => {
         throw new Error('Commitment not available');
       }
       if (!stateLeaves) {
-        sateLeavesToUse = deposits.map((a) => a.commitment);
-        // throw new Error('State leaves not available');
+        // stateLeavesToUse = deposits.map((a) => a.commitment);
+        throw new Error('State leaves not available');
       }
       if (!aspLeaves) {
-        aspLeavesToUse = deposits.map((a) => a.label);
-        // throw new Error('ASP leaves not available');
+        // aspLeavesToUse = deposits.map((a) => a.label);
+        throw new Error('ASP leaves not available');
       }
 
       let poolScope: StarknetAddress | undefined;
@@ -266,7 +263,7 @@ export const useWithdraw = () => {
         );
 
         poolScope = selectedPoolInfo.scope;
-        stateMerkleProof = generateMerkleProof(sateLeavesToUse, commitment.hash);
+        stateMerkleProof = generateMerkleProof(stateLeavesToUse, commitment.hash);
         aspMerkleProof = generateMerkleProof(aspLeavesToUse, commitment.label);
         const context = await getContext(newWithdrawal, poolScope);
         const { secret, nullifier } = await createWithdrawalSecrets({ commitment, seed, chain });
@@ -368,7 +365,7 @@ export const useWithdraw = () => {
       )
         throw new Error('Missing required data to withdraw');
 
-      const scope = await getScope(selectedPoolInfo);
+      const scope = selectedPoolInfo.scope;
 
       try {
         setIsClosable(false);
@@ -386,7 +383,15 @@ export const useWithdraw = () => {
 
         const txHash = res.txHash as `0x${string}`;
 
-        const receipts = await waitForEvents('Withdraw', txHash, selectedPoolInfo as never);
+        const receipts = await fetchEvents({
+          rpcUrl: chain.rpcUrl,
+          params: {
+            event: 'Withdraw',
+            txHash,
+            poolInfo: selectedPoolInfo,
+          },
+        });
+
         if (!receipts.length) throw new Error('Receipt not found');
         const [{ withdrawnValue, blockNumber }] = receipts;
 
@@ -453,6 +458,8 @@ export const useWithdraw = () => {
       resetQuote,
       relayerData,
       quoteState.quoteCommitment,
+      fetchEvents,
+      chain.rpcUrl,
       setTransactionHash,
       setModalOpen,
       addWithdrawal,

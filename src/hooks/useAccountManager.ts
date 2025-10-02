@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import { toAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { ChainData } from '~/config';
 import { PoolAccount } from '~/types';
 import { useSdk } from './useWorkerSdk';
@@ -16,7 +15,7 @@ export function useAccountManager(
   const loadChainAccounts = useCallback(
     async ({ seed, chain, refetch = true }: { seed: string; chain: ChainData[string]; refetch?: boolean }) => {
       const { poolAccounts, poolAccountsByChainScope } = await loadAccounts({ seed, chain, refetch });
-      setPoolAccounts(poolAccounts.map((account) => ({ ...account, scope: toAddress(account.scope) })));
+      setPoolAccounts(poolAccounts);
       setPoolAccountsByChainScope(poolAccountsByChainScope);
 
       return { poolAccounts, poolAccountsByChainScope };

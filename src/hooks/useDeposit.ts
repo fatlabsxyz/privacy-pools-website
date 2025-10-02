@@ -5,7 +5,6 @@ import { useAccount, useSendTransaction } from '@starknet-react/core';
 import { parseUnits } from 'viem/utils';
 import { useChainContext, useAccountContext, useNotifications, usePoolAccountsContext } from '~/hooks';
 import { Hash, ModalType, Secret } from '~/types';
-import { waitForEvents } from '../utils/sdk';
 import { useModal } from './useModal';
 import { useSdk } from './useWorkerSdk';
 
@@ -16,7 +15,7 @@ export const useDeposit = () => {
     balanceBN: { decimals },
     chain,
   } = useChainContext();
-  const { deposit: sdkDeposit, createDepositSecrets } = useSdk();
+  const { deposit: sdkDeposit, createDepositSecrets, fetchEvents } = useSdk();
   const { addNotification, getDefaultErrorMessage } = useNotifications();
   const { setModalOpen, setIsClosable } = useModal();
   const { sendAsync } = useSendTransaction({});
@@ -47,16 +46,24 @@ export const useDeposit = () => {
       setModalOpen(ModalType.PROCESSING);
       const trData = await sdkDeposit({
         amount: value,
-        entryPoint: selectedPoolInfo.entryPointAddress,
+        pool: selectedPoolInfo,
         precommitment: precommitmentHash,
-        token: selectedPoolInfo.assetAddress,
+        rpcUrl: chain.rpcUrl,
       });
 
       const { transaction_hash } = await sendAsync(trData);
 
       setTransactionHash(transaction_hash as never);
 
-      const deposits = await waitForEvents('Deposit', transaction_hash, selectedPoolInfo, 3);
+      const deposits = await fetchEvents({
+        params: {
+          event: 'Deposit',
+          txHash: transaction_hash,
+          poolInfo: selectedPoolInfo,
+          maxRetries: 3,
+        },
+        rpcUrl: chain.rpcUrl,
+      });
 
       if (deposits.length === 0) {
         throw new Error('no deposit found');
