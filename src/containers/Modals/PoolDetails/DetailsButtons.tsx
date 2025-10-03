@@ -1,4 +1,5 @@
 import { Exit, PiggyBank, WatsonHealthRotate_360 } from '@carbon/icons-react';
+import { StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { Button, Stack, styled } from '@mui/material';
 import { useAccount } from '@starknet-react/core';
 import { formatUnits } from 'viem';
@@ -26,7 +27,7 @@ export const DetailButtons = () => {
     if (isExitDisabled) return;
     if (!poolAccount) throw new Error('Pool account not found');
 
-    setTarget(address!);
+    setTarget(address as StarknetAddress);
     setAmount(formatUnits(poolAccount.balance, decimals));
     setActionType(EventType.EXIT);
     setModalOpen(ModalType.GENERATE_ZK_PROOF);
