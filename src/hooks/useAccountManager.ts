@@ -13,8 +13,8 @@ export function useAccountManager(
   const { loadAccounts } = useSdk();
 
   const loadChainAccounts = useCallback(
-    async ({ seed, chain, refetch = true }: { seed: string; chain: ChainData[string]; refetch?: boolean }) => {
-      const { poolAccounts, poolAccountsByChainScope } = await loadAccounts({ seed, chain, refetch });
+    async ({ seed, chain }: { seed: string; chain: ChainData[string]; refetch?: boolean }) => {
+      const { poolAccounts, poolAccountsByChainScope } = await loadAccounts({ seed, chain });
       setPoolAccounts(poolAccounts);
       setPoolAccountsByChainScope(poolAccountsByChainScope);
 
@@ -25,7 +25,7 @@ export function useAccountManager(
 
   const createAccount = useCallback(
     async (seed: string, chain: ChainData[string]) => {
-      await loadChainAccounts({ seed, chain, refetch: false });
+      await loadChainAccounts({ seed, chain });
       setSeed(seed);
     },
     [loadChainAccounts, setSeed],

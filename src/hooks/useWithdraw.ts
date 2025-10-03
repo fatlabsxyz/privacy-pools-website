@@ -47,7 +47,7 @@ export const useWithdraw = () => {
   const { chain } = useChainContext();
   const { setModalOpen, setIsClosable } = useModal();
   const { aspData, relayerData } = useExternalServices();
-  const { resetQuote, quoteState } = useQuoteContext();
+  const { resetQuote, quoteState, markAsExpired } = useQuoteContext();
   const {
     selectedPoolInfo,
     balanceBN: { decimals },
@@ -438,6 +438,7 @@ export const useWithdraw = () => {
         const privacyPoolError = getPrivacyPoolErrorMessage(error?.message || '');
         const errorMessage = privacyPoolError || getDefaultErrorMessage(error?.message);
         setModalOpen(ModalType.NONE);
+        markAsExpired();
 
         addNotification('error', errorMessage);
         console.error('Error withdrawing', error);
@@ -466,6 +467,7 @@ export const useWithdraw = () => {
       poolAccount?.balance,
       getPrivacyPoolErrorMessage,
       getDefaultErrorMessage,
+      markAsExpired,
       addNotification,
     ],
   );

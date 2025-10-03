@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useState, useEffect } from 'react';
+import { StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { Uint256 } from 'starknet';
 import { Address, createPublicClient, getAddress, http } from 'viem';
@@ -29,8 +30,8 @@ type ContextType = {
   // Inputs
   amount: string;
   setAmount: (val: string) => void;
-  target: Address | '';
-  setTarget: (val: Address | '') => void;
+  target: StarknetAddress | '';
+  setTarget: (val: StarknetAddress | '') => void;
   poolAccount: PoolAccount | undefined;
   setPoolAccount: (val?: PoolAccount) => void;
   resetInputs: () => void;
@@ -77,7 +78,7 @@ export const PoolAccountsProvider = ({ children }: Props) => {
   const [transactionHash, setTransactionHash] = useState<Address>();
 
   const [amount, setAmount] = useState<string>('');
-  const [target, setTarget] = useState<Address | ''>('');
+  const [target, setTarget] = useState<StarknetAddress | ''>('');
   const [poolAccount, setPoolAccount] = useState<PoolAccount>();
 
   const [proof, setProof] = useState<ContextType['proof']>(null);
