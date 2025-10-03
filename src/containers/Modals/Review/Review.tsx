@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Box, Button, CircularProgress, Stack, styled, Switch, Typography } from '@mui/material';
-// import { parseUnits } from 'viem';
+import { parseUnits } from 'viem';
 import { BaseModal } from '~/components';
 import { useQuoteContext } from '~/contexts/QuoteContext';
 import {
@@ -14,8 +14,8 @@ import {
   useWithdraw,
   useExternalServices,
   useChainContext,
-  // useRequestQuote,
-  // useNotifications,
+  useRequestQuote,
+  useNotifications,
 } from '~/hooks';
 import { EventType, ModalType } from '~/types';
 import { ModalContainer, ModalTitle } from '../Deposit';
@@ -30,55 +30,39 @@ export const ReviewModal = () => {
   const { isLoading: isWithdrawLoading } = useWithdraw();
   // const isWithdrawLoading = false;
   const { isLoading: isExitLoading } = useExit();
-  const {
-    actionType,
-    // feeCommitment,
-    amount,
-    target,
-  } = usePoolAccountsContext();
-  const feeCommitment = true;
+  const { actionType, feeCommitment, amount, target } = usePoolAccountsContext();
   const [isConfirmClicked, setIsConfirmClicked] = useState(false);
   const { quoteState, setExtraGas } = useQuoteContext();
 
   // Quote logic for withdrawals
   const {
-    // balanceBN: { decimals },
+    balanceBN: { decimals },
     selectedPoolInfo,
-    // chainId,
+    chainId,
   } = useChainContext();
-  const {
-    // currentSelectedRelayerData,
-    relayerData,
-  } = useExternalServices();
-  // const { addNotification } = useNotifications();
+  const { currentSelectedRelayerData, relayerData } = useExternalServices();
+  const { addNotification } = useNotifications();
 
   // Helper function to determine if current asset is a stablecoin
   const isStablecoin = (assetSymbol: string): boolean => {
     return ['USDT', 'USDC', 'USDS', 'sUSDS', 'DAI'].includes(assetSymbol);
   };
 
-  // const amountBN = parseUnits(amount, decimals);
-  const {
-    // getQuote,
-    isQuoteLoading,
-  } = relayerData || {};
-  // const { isQuoteValid, isExpired, requestNewQuote } = useRequestQuote({
-  //   getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
-  //   isQuoteLoading: isQuoteLoading || false,
-  //   quoteError: null,
-  //   chainId,
-  //   amountBN,
-  //   assetAddress: selectedPoolInfo?.assetAddress,
-  //   recipient: target,
-  //   isValidAmount: amountBN > 0n,
-  //   isRecipientAddressValid: !!target,
-  //   isRelayerSelected: !!currentSelectedRelayerData?.relayerAddress,
-  //   addNotification,
-  // });
-
-  const isQuoteValid = true;
-  const isExpired = false;
-  const requestNewQuote = () => {};
+  const amountBN = parseUnits(amount, decimals);
+  const { getQuote, isQuoteLoading } = relayerData || {};
+  const { isQuoteValid, isExpired, requestNewQuote } = useRequestQuote({
+    getQuote: getQuote || (() => Promise.reject(new Error('No relayer data'))),
+    isQuoteLoading: isQuoteLoading || false,
+    quoteError: null,
+    chainId,
+    amountBN,
+    assetAddress: selectedPoolInfo?.assetAddress,
+    recipient: target,
+    isValidAmount: amountBN > 0n,
+    isRecipientAddressValid: !!target,
+    isRelayerSelected: !!currentSelectedRelayerData?.relayerAddress,
+    addNotification,
+  });
 
   const isLoading = isDepositLoading || isExitLoading || isWithdrawLoading;
 
@@ -102,6 +86,7 @@ export const ReviewModal = () => {
 
   const handleRequestNewQuote = async () => {
     await requestNewQuote();
+    setIsConfirmClicked(false);
   };
 
   // Reset isConfirmClicked when modal opens or when starting a new action

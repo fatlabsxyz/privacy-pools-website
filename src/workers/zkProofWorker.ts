@@ -99,16 +99,10 @@ const getPoolsInfo = async (poolInfo: PoolInfo[], rpcUrl: string) => {
   return completePoolInfo;
 };
 
-const loadChainAccounts = async ({
-  chain: { rpcUrl, poolInfo },
-  seed,
-  refetch,
-}: LoadChainAccountsCommand['payload']) => {
-  const accountService = loadAccountsService(rpcUrl, seed);
-  if (refetch) {
-    const completePoolInfo = await getPoolsInfo(poolInfo, rpcUrl);
-    await accountService.retrieveHistory(completePoolInfo);
-  }
+const loadChainAccounts = async ({ chain: { rpcUrl, poolInfo }, seed }: LoadChainAccountsCommand['payload']) => {
+  const accountService = loadAccountsService(rpcUrl, seed, true);
+  const completePoolInfo = await getPoolsInfo(poolInfo, rpcUrl);
+  await accountService.retrieveHistory(completePoolInfo);
   const chainId = poolInfo[0].chainId;
   const provider = loadProvider(rpcUrl);
   return getPoolAccountsFromAccount(accountService.account, chainId, provider);

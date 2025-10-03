@@ -87,9 +87,7 @@ export interface RageQuitProved {
 
 export interface LoadChainAccountsCommand {
   type: 'loadAccounts';
-  payload: AccountRetrievalData & { chain: { poolInfo: PoolInfo[] } } & {
-    refetch?: boolean;
-  };
+  payload: AccountRetrievalData & { chain: { poolInfo: PoolInfo[] } };
 }
 
 export interface ChainAccountsLoaded {
