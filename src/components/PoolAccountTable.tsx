@@ -2,6 +2,7 @@
 
 import { useState, MouseEvent, useEffect, useMemo } from 'react';
 import { OverflowMenuVertical } from '@carbon/icons-react';
+import { StarknetAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import {
   styled,
   Table,
@@ -67,7 +68,7 @@ export const PoolAccountTable = ({ records }: { records: PoolAccount[] }) => {
     const foundAccount = poolAccounts.find((pa) => pa.label === poolAccount.label);
     if (!foundAccount) return;
 
-    setTarget(address);
+    setTarget(address as StarknetAddress);
     setPoolAccount(foundAccount);
     setAmount(formatUnits(poolAccount.balance, decimals));
     setActionType(EventType.EXIT);

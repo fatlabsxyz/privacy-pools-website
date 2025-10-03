@@ -3,6 +3,7 @@
 import { ChangeEvent, FocusEventHandler, useCallback, useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Copy, Checkmark } from '@carbon/icons-react';
+import { StarknetAddress, toAddress } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import {
   Box,
   Button,
@@ -16,7 +17,6 @@ import {
   useTheme,
 } from '@mui/material';
 import { useStarkAddress, useStarkName } from '@starknet-react/core';
-import { validateAndParseAddress } from 'starknet';
 import { Address, formatUnits, parseUnits } from 'viem';
 import { CoinIcon, ImageContainer, InputContainer, ModalContainer, ModalTitle } from '~/containers/Modals/Deposit';
 import { useChainContext, useAccountContext, useModal, usePoolAccountsContext, useNotifications } from '~/hooks';
@@ -27,9 +27,9 @@ import { AmountInputSection } from './AmountInputSection';
 import { PoolAccountSelectorSection } from './PoolAccountSelectorSection';
 import { RelayerSelectorSection } from './RelayerSelectorSection';
 
-const validateAddress = (address: string): Address | null => {
+const validateAddress = (address: string) => {
   try {
-    return validateAndParseAddress(address) as Address;
+    return toAddress(address);
   } catch {
     return null;
   }
@@ -123,7 +123,7 @@ export const WithdrawForm = () => {
   }, [isEnsName, inputValue]);
 
   const {
-    data: ensAddress,
+    data: starknedAddress,
     isLoading: isLoadingEnsAddress,
     error: ensError,
   } = useStarkAddress({
@@ -136,12 +136,12 @@ export const WithdrawForm = () => {
 
   // Effect to handle ENS resolution
   useEffect(() => {
-    if (isEnsName && ensAddress) {
-      setTarget(ensAddress as Address);
+    if (isEnsName && starknedAddress) {
+      setTarget(starknedAddress as StarknetAddress);
       setTargetAddressHasError(false);
       setEnsName(inputValue);
-      addNotification('success', `ENS name resolved to ${truncateAddress(ensAddress)}`);
-    } else if (isEnsName && !isLoadingEnsAddress && !ensAddress && normalizedName) {
+      addNotification('success', `ENS name resolved to ${truncateAddress(starknedAddress)}`);
+    } else if (isEnsName && !isLoadingEnsAddress && !starknedAddress && normalizedName) {
       if (ensError) {
         console.error('ENS Resolution Error:', ensError);
         addNotification('error', `ENS resolution failed: ${ensError.message || 'Unknown error'}`);
@@ -150,7 +150,16 @@ export const WithdrawForm = () => {
       }
       setTargetAddressHasError(true);
     }
-  }, [ensAddress, isEnsName, isLoadingEnsAddress, inputValue, normalizedName, ensError, setTarget, addNotification]);
+  }, [
+    starknedAddress,
+    isEnsName,
+    isLoadingEnsAddress,
+    inputValue,
+    normalizedName,
+    ensError,
+    setTarget,
+    addNotification,
+  ]);
 
   const amountBN = useMemo(() => {
     try {
@@ -313,7 +322,7 @@ export const WithdrawForm = () => {
     // If it's a valid address, set it directly
     const parsedAddress = validateAddress(value);
     if (parsedAddress) {
-      setTarget(parsedAddress as Address);
+      setTarget(parsedAddress);
       setEnsName(null);
     } else {
       // Check if it looks like a complete ENS name (dot + 3+ chars)
@@ -322,7 +331,7 @@ export const WithdrawForm = () => {
 
       if (!isCompleteEns) {
         // If it's not a complete ENS name and not a valid address, clear the target
-        setTarget('' as Address);
+        setTarget('');
         setEnsName(null);
       }
     }
@@ -348,11 +357,11 @@ export const WithdrawForm = () => {
 
     if (isValidEnsFormat) {
       // If ENS is resolved or still loading, don't show error
-      if (ensAddress || isLoadingEnsAddress || ensName === value) {
+      if (starknedAddress || isLoadingEnsAddress || ensName === value) {
         setTargetAddressHasError(false);
       } else {
         // Only show error if ENS resolution failed
-        setTargetAddressHasError(!ensAddress && !isLoadingEnsAddress);
+        setTargetAddressHasError(!starknedAddress && !isLoadingEnsAddress);
       }
     } else {
       // Not a valid address or ENS format
