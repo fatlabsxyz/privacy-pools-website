@@ -37,7 +37,7 @@ const sdkInstance = initializeSDK();
 const loadProvider = (rpcUrl: string) => {
   let provider = chainProviderMap.get(rpcUrl);
   if (!provider) {
-    provider = new RpcProvider({ nodeUrl: rpcUrl });
+    provider = new RpcProvider({ nodeUrl: rpcUrl, specVersion: '0.10.0' });
     chainProviderMap.set(rpcUrl, provider);
   }
   return provider;

@@ -36,11 +36,11 @@ export const useSdk = () => {
   }, []);
 
   const waitForSdkMessage = useCallback(
-    <T extends WorkerMessages, MessageType extends T['type']>(message: MessageType) => {
+    <T extends WorkerMessages, MessageType extends T['type']>(message: MessageType, timeoutMs?: number) => {
       if (!workerRef.current) {
         throw new Error('Worker not ready.');
       }
-      return waitForMessage<T, typeof message>(workerRef.current, message);
+      return waitForMessage<T, typeof message>(workerRef.current, message, timeoutMs);
     },
     [workerRef],
   );
@@ -190,7 +190,7 @@ export const useSdk = () => {
     params: FetchEventsCommand['payload'] & { params: { event: Event } },
   ) => ReturnType<typeof waitForEvents<Event>> = useCallback(
     async (payload: FetchEventsCommand['payload']) => {
-      const secrets = waitForSdkMessage('fetchEvents');
+      const secrets = waitForSdkMessage('fetchEvents', 60000);
       sendWorkerCommand({
         type: 'fetchEvents',
         payload,
