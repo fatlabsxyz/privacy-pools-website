@@ -285,6 +285,22 @@ self.onmessage = async (event: MessageEvent<WorkerCommands>) => {
         type: 'generateAuditorData',
         payload,
       });
+      break;
+    }
+    case 'generateViewKeys': {
+      const {
+        chain: { rpcUrl },
+        seed,
+        accountToGenerateViewKeysFor,
+      } = command.payload;
+      const accountService = loadAccountsService(rpcUrl, seed);
+      const payload = accountService.deriveViewKey(accountToGenerateViewKeysFor);
+      sendResponse({
+        id,
+        type: 'generateViewKeys',
+        payload,
+      });
+      break;
     }
   }
 };
