@@ -14,9 +14,14 @@ export const GenerateViewKeysForm: React.FC<{}> = () => {
 
     const poolAccountsToGenerateViewKeysFor = useMemo(() => poolAccounts.filter((acc) => acc.children.length), [poolAccounts]);
 
+    const setNewSelectedLabel = useCallback((newLabel: string) => {
+        setSelectedLabel(newLabel);
+        setViewKeys('');
+    }, [setSelectedLabel, setViewKeys])
+
     const generateViewKeysNow = useCallback(async () => {
         const selectedAccount = poolAccounts.find((account) => account.label === BigInt(selectedLabel));
-        if (!selectedAccount) {
+        if (!selectedAccount || !seed) {
             return;
         }
         const newViewKeys = await generateViewKeys({accountToGenerateViewKeysFor: selectedAccount, chain, seed})
@@ -26,7 +31,7 @@ export const GenerateViewKeysForm: React.FC<{}> = () => {
     const copyViewKeys = useCallback(() => {
         const clipboard = navigator.clipboard;
         clipboard.writeText(viewKeys);
-    }, []);
+    }, [viewKeys]);
 
     return (
         <ModalContainer>
@@ -37,7 +42,7 @@ export const GenerateViewKeysForm: React.FC<{}> = () => {
             <Stack gap='1.2rem' alignItems='stretch'>
                     <Typography>Account to generate view keys for</Typography>
                     <FormControl>
-                        <StyledSelect id='withdrawal-select' value={selectedLabel} displayEmpty onChange={(e) => setSelectedLabel(e.target.value as string)}>
+                        <StyledSelect id='withdrawal-select' value={selectedLabel} displayEmpty onChange={(e) => setNewSelectedLabel(e.target.value as string)}>
                         {poolAccountsToGenerateViewKeysFor.map((account) => (
                             <MenuItem key={account.lastCommitment.nullifier} value={account.label.toString()}>
                             {`PA-${account.name}`}
