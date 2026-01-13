@@ -9,7 +9,7 @@ import { parseEther } from 'viem/utils';
 import { getEnv } from '~/config/env';
 // import daiIcon from '~/assets/icons/dai.svg';
 import mainnetIcon from '~/assets/icons/mainnet_color.svg';
-const { ALCHEMY_KEY, IS_TESTNET, ASP_ENDPOINT } = getEnv();
+const { ALCHEMY_KEY, IS_TESTNET, ASP_ENDPOINT, RPC_URL, RELAYER_URL } = getEnv();
 
 // Add chains to the whitelist to be used in the app
 const mainnetChains: readonly [Chain, ...Chain[]] = [mainnet];
@@ -64,11 +64,23 @@ const mainnetChainData: ChainData = {
     decimals: mainnet.nativeCurrency.decimals,
     image: mainnetIcon.src,
     explorerUrl: mainnet.explorers.voyager.at(0)!,
-    relayers: [{ name: 'Fast Relay', url: 'https://fastrelay.xyz' }],
+    relayers: [{ name: 'Fast Relay', url: RELAYER_URL }],
     sdkRpcUrl: `/api/hypersync-rpc?chainId=1`, // Secure Hypersync proxy (relative URL)
-    rpcUrl: `${mainnet.rpcUrls.alchemy.http[0]}/${ALCHEMY_KEY}` as const,
+    rpcUrl: `${RPC_URL}${ALCHEMY_KEY}` as const,
     aspUrl: ASP_ENDPOINT,
-    poolInfo: [],
+    poolInfo: [
+      {
+        chainId: mainnet.id.toString(),
+        asset: 'STRK' as const,
+        assetAddress: toAddress('0x04718f5a0Fc34cC1AF16A1cdee98fFB20C31f5cD61D6Ab07201858f4287c938D'),
+        assetDecimals: 18,
+        address: toAddress('0x53503f5c948ef6ff4287354b18179f1b6fff7bb5655c8ecf9d512acfa2985fe'),
+        scope: toAddress(0x2636c6f2a2b8abdefb617db8d4fc351611d08cc771d09e89201acced3762136n),
+        entryPointAddress: toAddress('0x9337965bd517b572463bdbfb170c3f34e1058c4c8203ea39d520d3adcae3c1'),
+        maxDeposit: parseEther('10'),
+        deploymentBlock: 5528622n,
+      },
+    ],
   },
 };
 
