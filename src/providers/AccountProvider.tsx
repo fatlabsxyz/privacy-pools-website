@@ -1,7 +1,7 @@
 'use client';
 
-import { StarknetAccountService } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { createContext, SetStateAction, Dispatch, useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { StarknetAccountService } from '@fatsolutions/privacy-pools-core-starknet-sdk';
 import { num } from 'starknet';
 import { ChainData } from '~/config';
 import { useChainContext, useExternalServices, useNotifications, usePoolAccountsContext } from '~/hooks';

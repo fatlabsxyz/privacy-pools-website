@@ -51,7 +51,6 @@ export const AssetSelect: React.FC = () => {
         <Image src={poolWithAsset.icon} alt={asset} width={20} height={20} style={{ width: '100%', height: '100%' }} />
       ) : null;
     };
-    iconRenderer.displayName = 'getAssetIcon';
     return iconRenderer;
   }, [chain.poolInfo]);
 

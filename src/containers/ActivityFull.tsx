@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { Box, styled } from '@mui/material';
 import { ActivityTable, AdvancedNavigation, SPagination } from '~/components';
@@ -10,16 +10,9 @@ import { ActivityRecords } from '~/types';
 
 export const ActivityFull = () => {
   const { ITEMS_PER_PAGE, allEventsByPage, fullPersonalActivity, globalEventsCount, isLoading } = useAdvancedView();
-  const [view, setView] = useState<'global' | 'personal'>('global');
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (pathname.includes('personal')) {
-      setView('personal');
-    } else {
-      setView('global');
-    }
-  }, [pathname]);
+  const view = useMemo(() => (pathname.includes('personal') ? 'personal' : 'global'), [pathname]);
 
   const items = useMemo(
     () => (view === 'global' ? allEventsByPage : fullPersonalActivity),

@@ -157,12 +157,14 @@ export const SeedPhraseForm = ({
 
   useEffect(() => {
     if (seedPhrase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSplitSeedPhrase(seedPhrase.split(' '));
     }
   }, [seedPhrase]);
 
   useEffect(() => {
     if (type === 'load') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsHidden(false);
     }
   }, [type]);
