@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Map chainId to Hypersync endpoint
     const hypersyncUrls: Record<string, string> = {
       [mainnet.id.toString()]: `https://starknet-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, // Mainnet
-      [sepolia.id.toString()]: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/${ALCHEMY_KEY}`, // Sepolia
+      [sepolia.id.toString()]: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/${ALCHEMY_KEY}`, // Sepolia
     };
 
     const hypersyncUrl = hypersyncUrls[chainId];
