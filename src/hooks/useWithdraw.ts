@@ -345,28 +345,31 @@ export const useWithdraw = () => {
       setTransactionHash(txHash as StarknetAddress);
       setModalOpen(ModalType.PROCESSING);
 
-      addWithdrawal({
-        parentCommitment: commitment,
-        value: poolAccount?.balance - withdrawnValue,
-        nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
-        secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
-        blockNumber: BigInt(blockNumber!),
-        txHash: txHash,
-      });
+      // Workaround for view not updating
+      setTimeout(() => {
+        addWithdrawal({
+          parentCommitment: commitment,
+          value: poolAccount?.balance - withdrawnValue,
+          nullifier: (currentNewSecretKeys as { nullifier?: unknown })?.nullifier as Secret,
+          secret: (currentNewSecretKeys as { secret?: unknown })?.secret as Secret,
+          blockNumber: BigInt(blockNumber!),
+          txHash: txHash,
+        });
 
-      // Log successful withdrawal to Sentry for analytics
-      addBreadcrumb({
-        message: 'Withdrawal successful',
-        category: 'transaction',
-        data: {
-          transactionHash: txHash,
-          blockNumber: blockNumber?.toString(),
-          value: withdrawnValue.toString(),
-        },
-        level: 'info',
-      });
+        // Log successful withdrawal to Sentry for analytics
+        addBreadcrumb({
+          message: 'Withdrawal successful',
+          category: 'transaction',
+          data: {
+            transactionHash: txHash,
+            blockNumber: blockNumber?.toString(),
+            value: withdrawnValue.toString(),
+          },
+          level: 'info',
+        });
 
-      setModalOpen(ModalType.SUCCESS);
+        setModalOpen(ModalType.SUCCESS);
+      }, 0);
     },
     [
       proof,

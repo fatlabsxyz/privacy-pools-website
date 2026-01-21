@@ -21,7 +21,7 @@ export const Modals = () => {
       <SuccessModal />
       <GeneratingModal />
       <ConnectModal />
-      <GenerateViewKeysModal/>
+      <GenerateViewKeysModal />
     </>
   );
 };
