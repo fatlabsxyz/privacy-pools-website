@@ -17,8 +17,8 @@ export function StarknetProvider({ children }: { children: React.ReactNode }) {
   const alchemyProvider = useRef(
     jsonRpcProvider({
       rpc: () => ({
-        nodeUrl: `https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_10/${getEnv().ALCHEMY_KEY}`,
-        specVersion: '0.10.0',
+        nodeUrl: `${getEnv().RPC_URL}${getEnv().ALCHEMY_KEY}`,
+        specVersion: getEnv().RPC_SPEC_VERSION,
       }),
     }),
   );

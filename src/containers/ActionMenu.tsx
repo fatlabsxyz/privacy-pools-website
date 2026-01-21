@@ -1,8 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Button, Stack } from '@mui/material';
 import { useAccount } from '@starknet-react/core';
-import { useMemo } from 'react';
 import { useAccountContext, useModal, usePoolAccountsContext, useChainContext } from '~/hooks';
 import { EventType, ModalType } from '~/types';
 
@@ -15,7 +15,10 @@ export const ActionMenu = () => {
 
   const isWithdrawDisabled = !address || !hasApprovedDeposit || !seed || !hasSomeRelayerAvailable;
   const isDepositDisabled = !address || !seed || !BigInt(maxDeposit);
-  const isGenerateViewKeysDisabled = useMemo(() => !address || !poolAccounts.some((acc) => acc.children.length > 0), [address, poolAccounts]);
+  const isGenerateViewKeysDisabled = useMemo(
+    () => !address || !poolAccounts.some((acc) => acc.children.length > 0),
+    [address, poolAccounts],
+  );
 
   const goToDeposit = () => {
     setModalOpen(ModalType.DEPOSIT);
@@ -30,7 +33,7 @@ export const ActionMenu = () => {
   const goToViewKeysGeneration = () => {
     setModalOpen(ModalType.VIEW_KEYS);
     setActionType(EventType.GENERATE_VIEW_KEYS);
-  }
+  };
 
   return (
     <Stack direction='row' spacing={2} data-testid='action-menu'>
@@ -40,7 +43,11 @@ export const ActionMenu = () => {
       <Button disabled={isWithdrawDisabled} onClick={goToWithdraw} data-testid='withdraw-button'>
         Withdraw
       </Button>
-      <Button disabled={isGenerateViewKeysDisabled} onClick={goToViewKeysGeneration} data-testid='generate-view-keys-button'>
+      <Button
+        disabled={isGenerateViewKeysDisabled}
+        onClick={goToViewKeysGeneration}
+        data-testid='generate-view-keys-button'
+      >
         View Keys
       </Button>
     </Stack>
